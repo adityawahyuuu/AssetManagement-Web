@@ -19,9 +19,7 @@ export default function RegisterPage() {
     email: "",
     password: "",
     confirmPassword: "",
-    fullName: "",
-    studentId: "",
-    dormName: "",
+    username: "",
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,7 +41,7 @@ export default function RegisterPage() {
       const validatedData = registerSchema.parse(formData)
 
       // Call registration API
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch("/api/user/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -90,15 +88,15 @@ export default function RegisterPage() {
             )}
 
             <div className="space-y-2">
-              <label htmlFor="fullName" className="text-sm font-medium text-slate-700">
-                Full Name
+              <label htmlFor="username" className="text-sm font-medium text-slate-700">
+                Username
               </label>
               <Input
-                id="fullName"
-                name="fullName"
+                id="username"
+                name="username"
                 type="text"
                 placeholder="John Doe"
-                value={formData.fullName}
+                value={formData.username}
                 onChange={handleChange}
                 required
                 disabled={isLoading}
@@ -116,40 +114,6 @@ export default function RegisterPage() {
                 type="email"
                 placeholder="john@university.edu"
                 value={formData.email}
-                onChange={handleChange}
-                required
-                disabled={isLoading}
-                className="border-slate-200 focus:border-primary focus:ring-primary"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="studentId" className="text-sm font-medium text-slate-700">
-                Student ID
-              </label>
-              <Input
-                id="studentId"
-                name="studentId"
-                type="text"
-                placeholder="STU123456"
-                value={formData.studentId}
-                onChange={handleChange}
-                required
-                disabled={isLoading}
-                className="border-slate-200 focus:border-primary focus:ring-primary"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="dormName" className="text-sm font-medium text-slate-700">
-                Dorm Name
-              </label>
-              <Input
-                id="dormName"
-                name="dormName"
-                type="text"
-                placeholder="North Hall"
-                value={formData.dormName}
                 onChange={handleChange}
                 required
                 disabled={isLoading}

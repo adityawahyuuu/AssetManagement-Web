@@ -13,9 +13,7 @@ export interface RegisterFormData {
   email: string
   password: string
   confirmPassword: string
-  fullName: string
-  studentId: string
-  dormName: string
+  username: string
 }
 
 export interface LoginFormData {
