@@ -19,6 +19,10 @@ export function useAuth() {
     setIsAuth(authenticated)
     setIsAuthenticated(authenticated)
 
+    // Set loading to false immediately so dashboard can render
+    // The middleware is the source of truth for authentication
+    setIsLoading(false)
+
     if (authenticated) {
       // Try to get user data from API
       getCurrentUser()
@@ -41,12 +45,8 @@ export function useAuth() {
             setUser(null)
           }
         })
-
-      // Set loading to false immediately so dashboard can render
-      setIsLoading(false)
     } else {
       setUser(null)
-      setIsLoading(false)
     }
   }, [])
 

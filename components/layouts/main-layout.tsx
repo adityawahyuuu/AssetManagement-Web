@@ -4,20 +4,16 @@ import type { ReactNode } from "react"
 import Header from "./header"
 import Sidebar from "./sidebar"
 import { useAuth } from "@/hooks/use-auth"
-import { useEffect } from "react"
 
 interface MainLayoutProps {
   children: ReactNode
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
-  const { isLoading, isAuthenticated } = useAuth()
+  const { isLoading } = useAuth()
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      window.location.href = "/login"
-    }
-  }, [isLoading, isAuthenticated])
+  // Trust the middleware for authentication - it will redirect if needed
+  // We only use useAuth for fetching user data and displaying it
 
   if (isLoading) {
     return (
@@ -28,10 +24,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
         </div>
       </div>
     )
-  }
-
-  if (!isAuthenticated) {
-    return null
   }
 
   return (

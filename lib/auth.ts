@@ -62,7 +62,8 @@ export function isAuthenticated(): boolean {
 
   // Check if token is expired
   if (isTokenExpired()) {
-    // Clear expired session
+    // Clear expired localStorage data
+    // Note: httpOnly cookies are managed by the server/middleware
     removeAuthToken()
     clearUserSession()
     return false

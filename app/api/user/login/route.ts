@@ -48,15 +48,15 @@ export async function POST(request: NextRequest) {
     const responseResult = NextResponse.json(
       {
         message: data.message || 'Login successful',
-        token: data.token,
-        user: data.data || data.user,
+        token: data.data?.token,
+        user: data.data,
       },
       { status: 200 }
     )
 
     // Set auth token in cookie (10 minutes expiration)
-    if (data.token) {
-      responseResult.cookies.set('authToken', data.token, {
+    if (data.data?.token) {
+      responseResult.cookies.set('authToken', data.data.token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
