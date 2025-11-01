@@ -2,30 +2,29 @@
 
 import type { ReactNode } from "react"
 import { useAuth } from "@/hooks/use-auth"
-import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import Footer from "./footer"
 
 interface AuthLayoutProps {
   children: ReactNode
+  showFooter?: boolean
 }
 
-export default function AuthLayout({ children }: AuthLayoutProps) {
+export default function AuthLayout({ children, showFooter = true }: AuthLayoutProps) {
   const { isLoading, isAuthenticated } = useAuth()
-  const router = useRouter()
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.push("/dashboard")
+      window.location.href = "/dashboard"
     }
-  }, [isLoading, isAuthenticated, router])
+  }, [isLoading, isAuthenticated])
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-border border-t-primary" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+          <p className="mt-4 text-slate-600">Loading...</p>
         </div>
       </div>
     )
@@ -38,7 +37,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex flex-1 items-center justify-center px-4 py-12">{children}</main>
-      <Footer />
+      {showFooter && <Footer />}
     </div>
   )
 }

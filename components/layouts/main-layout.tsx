@@ -4,7 +4,6 @@ import type { ReactNode } from "react"
 import Header from "./header"
 import Sidebar from "./sidebar"
 import { useAuth } from "@/hooks/use-auth"
-import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 
 interface MainLayoutProps {
@@ -13,13 +12,12 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const { isLoading, isAuthenticated } = useAuth()
-  const router = useRouter()
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push("/login")
+      window.location.href = "/login"
     }
-  }, [isLoading, isAuthenticated, router])
+  }, [isLoading, isAuthenticated])
 
   if (isLoading) {
     return (

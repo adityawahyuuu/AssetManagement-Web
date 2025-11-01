@@ -56,13 +56,13 @@ export default function RegisterPage() {
 
       const data = await response.json()
 
-      // Store token if provided
-      if (data.token) {
-        localStorage.setItem("authToken", data.token)
+      // Store email for verification page
+      if (data.email) {
+        localStorage.setItem("verificationEmail", data.email)
       }
 
-      // Redirect to dashboard
-      router.push("/dashboard")
+      // Redirect to verification page
+      router.push("/verification")
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message)
@@ -75,8 +75,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 to-slate-100 px-4 py-12">
-      <Card className="w-full max-w-md shadow-lg border-slate-200">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12">
+      <Card className="w-full max-w-md shadow-xl border-slate-200 backdrop-blur-sm bg-white/95">
         <CardHeader className="space-y-2 bg-linear-to-r from-slate-50 to-slate-100 border-b border-slate-200">
           <CardTitle className="text-2xl text-slate-900">Create Account</CardTitle>
           <CardDescription className="text-slate-600">Register to manage your dorm assets</CardDescription>

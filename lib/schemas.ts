@@ -17,6 +17,18 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 })
 
+export const resetPasswordSchema = z
+  .object({
+    email: z.string().email("Invalid email address"),
+    otpCode: z.string().length(6, "OTP code must be 6 digits"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    passwordConfirm: z.string(),
+  })
+  .refine((data) => data.password === data.passwordConfirm, {
+    message: "Passwords don't match",
+    path: ["passwordConfirm"],
+  })
+
 export const roomSchema = z.object({
   name: z.string().min(1, "Room name is required"),
   roomNumber: z.string().min(1, "Room number is required"),
@@ -65,6 +77,7 @@ export const assetCheckoutReturnSchema = z.object({
 
 export type RegisterFormData = z.infer<typeof registerSchema>
 export type LoginFormData = z.infer<typeof loginSchema>
+export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>
 export type RoomFormData = z.infer<typeof roomSchema>
 export type AssetFormData = z.infer<typeof assetSchema>
 export type DormFormData = z.infer<typeof dormSchema>

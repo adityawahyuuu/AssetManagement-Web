@@ -97,7 +97,7 @@ export async function logoutUser() {
 }
 
 export async function getCurrentUser() {
-  return apiClient.get("/api/auth/me")
+  return apiClient.get("/api/user/auth/me")
 }
 
 export async function getRooms(page = 1, pageSize = 10) {

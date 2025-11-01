@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { getAuthToken, isAuthenticated as checkIsAuthenticated } from "@/lib/auth"
 import { getCurrentUser } from "@/lib/api"
 
@@ -11,22 +11,62 @@ export function useAuth() {
   const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
+  const checkAuth = useCallback(() => {
     const authToken = getAuthToken()
     const authenticated = checkIsAuthenticated()
+
     setToken(authToken)
     setIsAuth(authenticated)
     setIsAuthenticated(authenticated)
 
     if (authenticated) {
+      // Try to get user data from API
       getCurrentUser()
-        .then((userData) => setUser(userData))
-        .catch(() => setUser(null))
-        .finally(() => setIsLoading(false))
+        .then((response: any) => {
+          // Extract user data from response
+          const userData = response?.user || response?.data || response
+          setUser(userData)
+        })
+        .catch((error) => {
+          // If API fails, fall back to localStorage
+          console.warn("Could not fetch user data from API:", error)
+          const userSession = typeof window !== "undefined" ? localStorage.getItem("user") : null
+          if (userSession) {
+            try {
+              setUser(JSON.parse(userSession))
+            } catch {
+              setUser(null)
+            }
+          } else {
+            setUser(null)
+          }
+        })
+
+      // Set loading to false immediately so dashboard can render
+      setIsLoading(false)
     } else {
+      setUser(null)
       setIsLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    // Initial check
+    checkAuth()
+
+    // Listen for storage changes (e.g., login from another tab)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "authToken" || e.key === "authTokenExpiration") {
+        checkAuth()
+      }
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+    }
+  }, [checkAuth])
 
   return { token, isAuth, isAuthenticated, user, isLoading }
 }
