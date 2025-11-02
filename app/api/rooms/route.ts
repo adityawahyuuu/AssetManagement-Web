@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7146'
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5080'
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,9 +65,12 @@ export async function POST(request: NextRequest) {
     // Get Authorization header
     const authHeader = request.headers.get('Authorization')
 
+    console.log('[Next.js API] POST /api/rooms - Authorization header:', authHeader ? 'Present' : 'Missing')
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('[Next.js API] POST /api/rooms - No valid authorization header')
       return NextResponse.json(
-        { message: 'Unauthorized - No token provided' },
+        { message: 'Unauthorized - No token provided from client' },
         { status: 401 }
       )
     }
@@ -76,6 +79,7 @@ export async function POST(request: NextRequest) {
     const token = authHeader.substring(7)
 
     if (!token) {
+      console.error('[Next.js API] POST /api/rooms - Token extraction failed')
       return NextResponse.json(
         { message: 'Unauthorized - Invalid token' },
         { status: 401 }
@@ -84,8 +88,10 @@ export async function POST(request: NextRequest) {
 
     // Get request body
     const body = await request.json()
+    console.log('[Next.js API] POST /api/rooms - Request body:', JSON.stringify(body))
 
     // Proxy request to backend API
+    console.log('[Next.js API] Forwarding to backend:', `${BACKEND_API_URL}/api/rooms`)
     const response = await fetch(`${BACKEND_API_URL}/api/rooms`, {
       method: 'POST',
       headers: {
@@ -95,9 +101,13 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body),
     })
 
+    console.log('[Next.js API] Backend response status:', response.status)
+
     const data = await response.json()
+    console.log('[Next.js API] Backend response data:', JSON.stringify(data))
 
     if (!response.ok) {
+      console.error('[Next.js API] Backend returned error:', response.status, data)
       return NextResponse.json(
         { message: data.message || 'Failed to create room' },
         { status: response.status }
@@ -106,7 +116,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data, { status: 201 })
   } catch (error) {
-    console.error('Create room error:', error)
+    console.error('[Next.js API] Create room error:', error)
     return NextResponse.json(
       { message: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
