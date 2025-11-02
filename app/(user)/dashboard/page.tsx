@@ -1,194 +1,164 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import MainLayout from "@/components/layouts/main-layout"
 import PageHeader from "@/components/layouts/page-header"
 import StatsCard from "@/components/dashboard/stats-card"
-import AssetList from "@/components/dashboard/asset-list"
-import RoomCard from "@/components/dashboard/room-card"
-import QuickActions from "@/components/dashboard/quick-actions"
-import ActivityFeed from "@/components/dashboard/activity-feed"
 import { Button } from "@/components/ui/button"
-import { Package, DoorOpen, Activity, TrendingUp } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Package, DoorOpen, Plus, Maximize2 } from "lucide-react"
 import Link from "next/link"
-
-// Mock data - replace with actual API calls
-const mockStats = [
-  {
-    title: "Total Assets",
-    value: "1,234",
-    description: "Across all rooms",
-    icon: <Package className="h-4 w-4" />,
-    trend: { value: 12, isPositive: true },
-  },
-  {
-    title: "Active Rooms",
-    value: "48",
-    description: "In your dorm",
-    icon: <DoorOpen className="h-4 w-4" />,
-    trend: { value: 5, isPositive: true },
-  },
-  {
-    title: "Checked Out",
-    value: "156",
-    description: "Currently in use",
-    icon: <Activity className="h-4 w-4" />,
-    trend: { value: 8, isPositive: false },
-  },
-  {
-    title: "Damaged Items",
-    value: "23",
-    description: "Needs attention",
-    icon: <TrendingUp className="h-4 w-4" />,
-    trend: { value: 3, isPositive: false },
-  },
-]
-
-const mockAssets = [
-  {
-    id: "1",
-    name: "Desk Lamp",
-    quantity: 45,
-    status: "available",
-    roomId: "room-1",
-    updatedAt: new Date(),
-  },
-  {
-    id: "2",
-    name: "Office Chair",
-    quantity: 32,
-    status: "in-use",
-    roomId: "room-2",
-    updatedAt: new Date(Date.now() - 86400000),
-  },
-  {
-    id: "3",
-    name: "Bookshelf",
-    quantity: 12,
-    status: "available",
-    roomId: "room-3",
-    updatedAt: new Date(Date.now() - 172800000),
-  },
-  {
-    id: "4",
-    name: "Whiteboard",
-    quantity: 8,
-    status: "damaged",
-    roomId: "room-4",
-    updatedAt: new Date(Date.now() - 259200000),
-  },
-  {
-    id: "5",
-    name: "Desk",
-    quantity: 28,
-    status: "available",
-    roomId: "room-5",
-    updatedAt: new Date(Date.now() - 345600000),
-  },
-]
-
-const mockRooms = [
-  {
-    id: "room-1",
-    name: "Study Room A",
-    roomNumber: "101",
-    capacity: 4,
-    assetCount: 12,
-  },
-  {
-    id: "room-2",
-    name: "Study Room B",
-    roomNumber: "102",
-    capacity: 6,
-    assetCount: 18,
-  },
-  {
-    id: "room-3",
-    name: "Common Area",
-    roomNumber: "103",
-    capacity: 20,
-    assetCount: 45,
-  },
-]
-
-const mockActivities = [
-  {
-    id: "1",
-    type: "checkout" as const,
-    title: "Desk Lamp",
-    description: "Checked out by John Doe",
-    timestamp: new Date(),
-  },
-  {
-    id: "2",
-    type: "return" as const,
-    title: "Office Chair",
-    description: "Returned by Jane Smith",
-    timestamp: new Date(Date.now() - 3600000),
-  },
-  {
-    id: "3",
-    type: "create" as const,
-    title: "New Asset",
-    description: "Bookshelf added to inventory",
-    timestamp: new Date(Date.now() - 7200000),
-  },
-  {
-    id: "4",
-    type: "update" as const,
-    title: "Whiteboard",
-    description: "Status changed to damaged",
-    timestamp: new Date(Date.now() - 10800000),
-  },
-]
+import { apiClient } from "@/lib/api"
+import type { Room, Asset } from "@/types"
 
 export default function DashboardPage() {
+  const router = useRouter()
+  const [rooms, setRooms] = useState<Room[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalRooms: 0,
+    totalAssets: 0,
+    totalValue: 0,
+    totalArea: 0,
+  })
 
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => setIsLoading(false), 500)
-    return () => clearTimeout(timer)
+    fetchDashboardData()
   }, [])
+
+  const fetchDashboardData = async () => {
+    setIsLoading(true)
+    try {
+      // Fetch user's rooms
+      const roomsResponse = await apiClient.get<{ data: Room[] }>("/api/rooms")
+      const userRooms = roomsResponse.data || []
+      setRooms(userRooms)
+
+      // Calculate stats
+      const totalArea = userRooms.reduce((sum, room) => sum + (room.lengthM * room.widthM), 0)
+
+      // Fetch all assets to calculate totals
+      const assetsResponse = await apiClient.get<{ data: Asset[] }>("/api/assets")
+      const allAssets = assetsResponse.data || []
+      const totalValue = allAssets.reduce((sum, asset) => sum + (asset.purchasePrice || 0), 0)
+
+      setStats({
+        totalRooms: userRooms.length,
+        totalAssets: allAssets.length,
+        totalValue,
+        totalArea,
+      })
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <MainLayout>
-      <PageHeader title="Dashboard" description="Welcome back! Here's an overview of your dorm assets." />
+      <PageHeader
+        title="Dashboard"
+        description="Manage your rooms and assets"
+        action={
+          <Button onClick={() => router.push("/rooms/new")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Room
+          </Button>
+        }
+      />
 
       {/* Stats Grid */}
       <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {mockStats.map((stat, index) => (
-          <StatsCard key={index} {...stat} />
-        ))}
+        <StatsCard
+          title="Total Rooms"
+          value={stats.totalRooms.toString()}
+          description="Your managed spaces"
+          icon={<DoorOpen className="h-4 w-4" />}
+        />
+        <StatsCard
+          title="Total Assets"
+          value={stats.totalAssets.toString()}
+          description="Across all rooms"
+          icon={<Package className="h-4 w-4" />}
+        />
+        <StatsCard
+          title="Total Value"
+          value={`$${stats.totalValue.toFixed(2)}`}
+          description="Asset worth"
+          icon={<Package className="h-4 w-4" />}
+        />
+        <StatsCard
+          title="Total Area"
+          value={`${stats.totalArea.toFixed(1)} m²`}
+          description="Combined room space"
+          icon={<Maximize2 className="h-4 w-4" />}
+        />
       </div>
 
-      {/* Quick Actions */}
-      <div className="mb-8">
-        <QuickActions />
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Left Column - Assets and Activity */}
-        <div className="lg:col-span-2 space-y-8">
-          <AssetList assets={mockAssets} isLoading={isLoading} />
-          <ActivityFeed activities={mockActivities} isLoading={isLoading} />
+      {/* Rooms Grid */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold">Your Rooms</h2>
         </div>
 
-        {/* Right Column - Rooms */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Rooms</h2>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/rooms">View All</Link>
-            </Button>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-muted-foreground">Loading rooms...</p>
           </div>
-          <div className="space-y-3">
-            {mockRooms.map((room) => (
-              <RoomCard key={room.id} room={room} />
+        ) : rooms.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <DoorOpen className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Rooms Yet</h3>
+              <p className="text-muted-foreground mb-4 text-center">
+                Get started by adding your first room
+              </p>
+              <Button onClick={() => router.push("/rooms/new")}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Room
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {rooms.map((room) => (
+              <Card
+                key={room.id}
+                className="cursor-pointer transition-all hover:shadow-lg hover:border-primary"
+                onClick={() => router.push(`/rooms/${room.id}`)}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <DoorOpen className="h-5 w-5 text-primary" />
+                      <CardTitle className="text-lg">{room.name}</CardTitle>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Dimensions:</span>
+                      <span className="font-medium">{room.lengthM}m × {room.widthM}m</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Area:</span>
+                      <span className="font-medium">{(room.lengthM * room.widthM).toFixed(2)} m²</span>
+                    </div>
+                    {room.doorPosition && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Door:</span>
+                        <span className="font-medium capitalize">{room.doorPosition}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
-        </div>
+        )}
       </div>
     </MainLayout>
   )

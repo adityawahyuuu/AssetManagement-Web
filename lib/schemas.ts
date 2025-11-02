@@ -31,18 +31,38 @@ export const resetPasswordSchema = z
 
 export const roomSchema = z.object({
   name: z.string().min(1, "Room name is required"),
-  roomNumber: z.string().min(1, "Room number is required"),
-  capacity: z.number().min(1, "Capacity must be at least 1"),
-  dormId: z.string().min(1, "Dorm ID is required"),
+  lengthM: z.coerce.number().min(0.1, "Length must be at least 0.1 meters").max(100, "Length must be less than 100 meters"),
+  widthM: z.coerce.number().min(0.1, "Width must be at least 0.1 meters").max(100, "Width must be less than 100 meters"),
+  doorPosition: z.string().optional(),
+  doorWidthCm: z.coerce.number().min(0).optional().or(z.literal("")),
+  windowPosition: z.string().optional(),
+  windowWidthCm: z.coerce.number().min(0).optional().or(z.literal("")),
+  powerOutletPositions: z.array(z.string()).optional(),
+  photoUrl: z.string().optional(),
+  notes: z.string().optional(),
 })
 
 export const assetSchema = z.object({
+  roomId: z.number().min(1, "Room is required"),
   name: z.string().min(1, "Asset name is required"),
-  description: z.string().optional(),
-  quantity: z.number().min(1, "Quantity must be at least 1"),
-  roomId: z.string().min(1, "Room ID is required"),
-  status: z.enum(["available", "in-use", "damaged", "lost"]),
-  categoryId: z.string().optional(),
+  category: z.string().optional(),
+  photoUrl: z.string().optional(),
+  lengthCm: z.coerce.number().min(1, "Length must be at least 1 cm"),
+  widthCm: z.coerce.number().min(1, "Width must be at least 1 cm"),
+  heightCm: z.coerce.number().min(1, "Height must be at least 1 cm"),
+  clearanceFrontCm: z.coerce.number().min(0).default(0),
+  clearanceSidesCm: z.coerce.number().min(0).default(0),
+  clearanceBackCm: z.coerce.number().min(0).default(0),
+  functionZone: z.string().optional(),
+  mustBeNearWall: z.boolean().default(false),
+  mustBeNearWindow: z.boolean().default(false),
+  mustBeNearOutlet: z.boolean().default(false),
+  canRotate: z.boolean().default(true),
+  cannotAdjacentTo: z.array(z.number()).optional(),
+  purchaseDate: z.string().optional(),
+  purchasePrice: z.coerce.number().min(0).optional().or(z.literal("")),
+  condition: z.string().optional(),
+  notes: z.string().optional(),
 })
 
 export const dormSchema = z.object({
