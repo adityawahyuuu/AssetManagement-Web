@@ -19,8 +19,8 @@ export default function Header() {
   const router = useRouter()
   const { user, isAuth, isLoading } = useAuth()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     router.push("/login")
   }
 

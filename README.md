@@ -5,7 +5,7 @@ A Next.js web application for managing dorm assets. This client application cons
 ## Prerequisites
 
 - Node.js 18+ and npm
-- AssetManagement-API running on `http://localhost:3000` (or configure a different URL)
+- AssetManagement-API backend running on `http://localhost:5080` (or configure a different URL)
 
 ## Setup Instructions
 
@@ -23,11 +23,14 @@ Copy the example environment file:
 cp .env.example .env.local
 ```
 
-Edit `.env.local` if your API is running on a different URL:
+Edit `.env.local` to configure the backend API URL:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3000
+# Backend API URL (default: http://localhost:5080)
+NEXT_PUBLIC_API_URL=http://localhost:5080
 ```
+
+**Note:** The frontend makes API calls to Next.js API routes (`/api/*`), which then proxy requests to the backend API configured above.
 
 ### 3. Run Development Server
 

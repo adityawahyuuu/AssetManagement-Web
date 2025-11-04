@@ -26,26 +26,26 @@ export interface Asset {
 }
 
 export interface AddAssetDto {
-  roomId: number
-  name: string
-  category?: string
-  photoUrl?: string
-  lengthCm: number
-  widthCm: number
-  heightCm: number
-  clearanceFrontCm?: number
-  clearanceSidesCm?: number
-  clearanceBackCm?: number
-  functionZone?: string
-  mustBeNearWall?: boolean
-  mustBeNearWindow?: boolean
-  mustBeNearOutlet?: boolean
-  canRotate?: boolean
-  cannotAdjacentTo?: number[]
-  purchaseDate?: string
-  purchasePrice?: number
-  condition?: string
-  notes?: string
+  RoomId: number
+  Name: string
+  Category?: string
+  PhotoUrl?: string
+  LengthCm: number
+  WidthCm: number
+  HeightCm: number
+  ClearanceFrontCm?: number
+  ClearanceSidesCm?: number
+  ClearanceBackCm?: number
+  FunctionZone?: string
+  MustBeNearWall?: boolean
+  MustBeNearWindow?: boolean
+  MustBeNearOutlet?: boolean
+  CanRotate?: boolean
+  CannotAdjacentTo?: number[]
+  PurchaseDate?: string
+  PurchasePrice?: number
+  Condition?: string
+  Notes?: string
 }
 
 export interface UpdateAssetDto {

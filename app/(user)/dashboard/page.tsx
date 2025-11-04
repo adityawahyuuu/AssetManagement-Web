@@ -31,16 +31,26 @@ export default function DashboardPage() {
     setIsLoading(true)
     try {
       // Fetch user's rooms
-      const roomsResponse = await apiClient.get<{ data: Room[] }>("/api/rooms")
-      const userRooms = roomsResponse.data || []
+      let userRooms: Room[] = []
+      try {
+        const roomsResponse = await apiClient.get<{ data: Room[] }>("/api/rooms")
+        userRooms = roomsResponse.data || []
+      } catch {
+        userRooms = []
+      }
       setRooms(userRooms)
 
       // Calculate stats
       const totalArea = userRooms.reduce((sum, room) => sum + (room.lengthM * room.widthM), 0)
 
       // Fetch all assets to calculate totals
-      const assetsResponse = await apiClient.get<{ data: Asset[] }>("/api/assets")
-      const allAssets = assetsResponse.data || []
+      let allAssets: Asset[] = []
+      try {
+        const assetsResponse = await apiClient.get<{ data: Asset[] }>("/api/assets")
+        allAssets = assetsResponse.data || []
+      } catch {
+        allAssets = []
+      }
       const totalValue = allAssets.reduce((sum, asset) => sum + (asset.purchasePrice || 0), 0)
 
       setStats({
@@ -49,8 +59,6 @@ export default function DashboardPage() {
         totalValue,
         totalArea,
       })
-    } catch (error) {
-      console.error("Failed to fetch dashboard data:", error)
     } finally {
       setIsLoading(false)
     }

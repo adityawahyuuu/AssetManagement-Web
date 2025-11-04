@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { assetSchema } from "@/lib/schemas"
-import { apiClient } from "@/lib/api"
-import type { AddAssetDto, Room } from "@/types"
+import { apiClient, getAssetCategories } from "@/lib/api"
+import type { AddAssetDto, Room, AssetCategory } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,27 +20,32 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [roomAreaCm2, setRoomAreaCm2] = useState(0)
   const [usedAreaCm2, setUsedAreaCm2] = useState(0)
+  const [categories, setCategories] = useState<AssetCategory[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(true)
 
   const [formData, setFormData] = useState<AddAssetDto>({
-    roomId,
-    name: "",
-    category: "",
-    lengthCm: 0,
-    widthCm: 0,
-    heightCm: 0,
-    clearanceFrontCm: 0,
-    clearanceSidesCm: 0,
-    clearanceBackCm: 0,
-    mustBeNearWall: false,
-    mustBeNearWindow: false,
-    mustBeNearOutlet: false,
-    canRotate: true,
-    purchasePrice: undefined,
-    condition: "",
-    notes: "",
+    RoomId: roomId,
+    Name: "",
+    Category: "",
+    LengthCm: 0,
+    WidthCm: 0,
+    HeightCm: 0,
+    ClearanceFrontCm: 0,
+    ClearanceSidesCm: 0,
+    ClearanceBackCm: 0,
+    MustBeNearWall: false,
+    MustBeNearWindow: false,
+    MustBeNearOutlet: false,
+    CanRotate: true,
+    PurchasePrice: undefined,
+    Condition: "",
+    Notes: "",
   })
 
   useEffect(() => {
+    // Fetch asset categories
+    fetchCategories()
+
     // Calculate room area if room data is available
     if (room) {
       const areaM2 = room.lengthM * room.widthM
@@ -51,9 +56,23 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
     }
   }, [room])
 
+  const fetchCategories = async () => {
+    try {
+      setLoadingCategories(true)
+      const response = await getAssetCategories()
+      const categoriesData = Array.isArray(response) ? response : response.data || []
+      setCategories(categoriesData)
+    } catch (error) {
+      console.error("Failed to fetch categories:", error)
+      setCategories([])
+    } finally {
+      setLoadingCategories(false)
+    }
+  }
+
   const fetchUsedArea = async () => {
     try {
-      const response = await apiClient.get<{ data: any[] }>(`/api/assets?roomId=${roomId}`)
+      const response = await apiClient.get<{ data: any[] }>(`/api/assets/room/${roomId}`)
       const assets = response.data || []
 
       const totalUsed = assets.reduce((sum, asset) => {
@@ -69,8 +88,8 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
   }
 
   const calculateAssetArea = () => {
-    const length = formData.lengthCm + 2 * (formData.clearanceSidesCm || 0)
-    const width = formData.widthCm + (formData.clearanceFrontCm || 0) + (formData.clearanceBackCm || 0)
+    const length = formData.LengthCm + 2 * (formData.ClearanceSidesCm || 0)
+    const width = formData.WidthCm + (formData.ClearanceFrontCm || 0) + (formData.ClearanceBackCm || 0)
     return length * width
   }
 
@@ -121,6 +140,7 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
       }
     } catch (error: any) {
       if (error.errors) {
+        // Zod validation errors
         const fieldErrors: Record<string, string> = {}
         error.errors.forEach((err: any) => {
           if (err.path) {
@@ -129,7 +149,9 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
         })
         setErrors(fieldErrors)
       } else {
-        setErrors({ general: error.message || "Failed to create asset" })
+        // Handle API error response (type: "Failed")
+        const errorMessage = error.message || error.data?.message || "Failed to create asset"
+        setErrors({ general: errorMessage })
       }
     } finally {
       setIsSubmitting(false)
@@ -167,42 +189,50 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium mb-1">
+            <label htmlFor="Name" className="block text-sm font-medium mb-1">
               Asset Name <span className="text-red-500">*</span>
             </label>
             <Input
-              id="name"
-              name="name"
-              value={formData.name}
+              id="Name"
+              name="Name"
+              value={formData.Name}
               onChange={handleChange}
               placeholder="e.g., Sofa, Desk, Bed"
               required
             />
-            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+            {errors.Name && <p className="mt-1 text-sm text-red-600">{errors.Name}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="category" className="block text-sm font-medium mb-1">
+              <label htmlFor="Category" className="block text-sm font-medium mb-1">
                 Category
               </label>
-              <Input
-                id="category"
-                name="category"
-                value={formData.category}
+              <select
+                id="Category"
+                name="Category"
+                value={formData.Category}
                 onChange={handleChange}
-                placeholder="e.g., Furniture, Electronics"
-              />
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                disabled={loadingCategories}
+              >
+                <option value="">{loadingCategories ? "Loading categories..." : "Select category"}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.name}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
-              <label htmlFor="condition" className="block text-sm font-medium mb-1">
+              <label htmlFor="Condition" className="block text-sm font-medium mb-1">
                 Condition
               </label>
               <select
-                id="condition"
-                name="condition"
-                value={formData.condition}
+                id="Condition"
+                name="Condition"
+                value={formData.Condition}
                 onChange={handleChange}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
               >
@@ -225,92 +255,92 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
         <CardContent className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label htmlFor="lengthCm" className="block text-sm font-medium mb-1">
+              <label htmlFor="LengthCm" className="block text-sm font-medium mb-1">
                 Length <span className="text-red-500">*</span>
               </label>
               <Input
-                id="lengthCm"
-                name="lengthCm"
+                id="LengthCm"
+                name="LengthCm"
                 type="number"
-                value={formData.lengthCm || ""}
+                value={formData.LengthCm || ""}
                 onChange={handleChange}
                 placeholder="e.g., 200"
                 required
               />
-              {errors.lengthCm && <p className="mt-1 text-sm text-red-600">{errors.lengthCm}</p>}
+              {errors.LengthCm && <p className="mt-1 text-sm text-red-600">{errors.LengthCm}</p>}
             </div>
 
             <div>
-              <label htmlFor="widthCm" className="block text-sm font-medium mb-1">
+              <label htmlFor="WidthCm" className="block text-sm font-medium mb-1">
                 Width <span className="text-red-500">*</span>
               </label>
               <Input
-                id="widthCm"
-                name="widthCm"
+                id="WidthCm"
+                name="WidthCm"
                 type="number"
-                value={formData.widthCm || ""}
+                value={formData.WidthCm || ""}
                 onChange={handleChange}
                 placeholder="e.g., 90"
                 required
               />
-              {errors.widthCm && <p className="mt-1 text-sm text-red-600">{errors.widthCm}</p>}
+              {errors.WidthCm && <p className="mt-1 text-sm text-red-600">{errors.WidthCm}</p>}
             </div>
 
             <div>
-              <label htmlFor="heightCm" className="block text-sm font-medium mb-1">
+              <label htmlFor="HeightCm" className="block text-sm font-medium mb-1">
                 Height <span className="text-red-500">*</span>
               </label>
               <Input
-                id="heightCm"
-                name="heightCm"
+                id="HeightCm"
+                name="HeightCm"
                 type="number"
-                value={formData.heightCm || ""}
+                value={formData.HeightCm || ""}
                 onChange={handleChange}
                 placeholder="e.g., 80"
                 required
               />
-              {errors.heightCm && <p className="mt-1 text-sm text-red-600">{errors.heightCm}</p>}
+              {errors.HeightCm && <p className="mt-1 text-sm text-red-600">{errors.HeightCm}</p>}
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label htmlFor="clearanceFrontCm" className="block text-sm font-medium mb-1">
+              <label htmlFor="ClearanceFrontCm" className="block text-sm font-medium mb-1">
                 Clearance Front
               </label>
               <Input
-                id="clearanceFrontCm"
-                name="clearanceFrontCm"
+                id="ClearanceFrontCm"
+                name="ClearanceFrontCm"
                 type="number"
-                value={formData.clearanceFrontCm || ""}
+                value={formData.ClearanceFrontCm || ""}
                 onChange={handleChange}
                 placeholder="0"
               />
             </div>
 
             <div>
-              <label htmlFor="clearanceSidesCm" className="block text-sm font-medium mb-1">
+              <label htmlFor="ClearanceSidesCm" className="block text-sm font-medium mb-1">
                 Clearance Sides
               </label>
               <Input
-                id="clearanceSidesCm"
-                name="clearanceSidesCm"
+                id="ClearanceSidesCm"
+                name="ClearanceSidesCm"
                 type="number"
-                value={formData.clearanceSidesCm || ""}
+                value={formData.ClearanceSidesCm || ""}
                 onChange={handleChange}
                 placeholder="0"
               />
             </div>
 
             <div>
-              <label htmlFor="clearanceBackCm" className="block text-sm font-medium mb-1">
+              <label htmlFor="ClearanceBackCm" className="block text-sm font-medium mb-1">
                 Clearance Back
               </label>
               <Input
-                id="clearanceBackCm"
-                name="clearanceBackCm"
+                id="ClearanceBackCm"
+                name="ClearanceBackCm"
                 type="number"
-                value={formData.clearanceBackCm || ""}
+                value={formData.ClearanceBackCm || ""}
                 onChange={handleChange}
                 placeholder="0"
               />
@@ -327,8 +357,8 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
-              name="mustBeNearWall"
-              checked={formData.mustBeNearWall}
+              name="MustBeNearWall"
+              checked={formData.MustBeNearWall}
               onChange={handleChange}
               className="rounded"
             />
@@ -338,8 +368,8 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
-              name="mustBeNearWindow"
-              checked={formData.mustBeNearWindow}
+              name="MustBeNearWindow"
+              checked={formData.MustBeNearWindow}
               onChange={handleChange}
               className="rounded"
             />
@@ -349,8 +379,8 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
-              name="mustBeNearOutlet"
-              checked={formData.mustBeNearOutlet}
+              name="MustBeNearOutlet"
+              checked={formData.MustBeNearOutlet}
               onChange={handleChange}
               className="rounded"
             />
@@ -360,8 +390,8 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
-              name="canRotate"
-              checked={formData.canRotate}
+              name="CanRotate"
+              checked={formData.CanRotate}
               onChange={handleChange}
               className="rounded"
             />
@@ -372,14 +402,14 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label htmlFor="purchasePrice" className="block text-sm font-medium mb-1">
+          <label htmlFor="PurchasePrice" className="block text-sm font-medium mb-1">
             Purchase Price
           </label>
           <Input
-            id="purchasePrice"
-            name="purchasePrice"
+            id="PurchasePrice"
+            name="PurchasePrice"
             type="number"
-            value={formData.purchasePrice || ""}
+            value={formData.PurchasePrice || ""}
             onChange={handleChange}
             placeholder="0.00"
           />
@@ -387,13 +417,13 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
       </div>
 
       <div>
-        <label htmlFor="notes" className="block text-sm font-medium mb-1">
+        <label htmlFor="Notes" className="block text-sm font-medium mb-1">
           Notes
         </label>
         <textarea
-          id="notes"
-          name="notes"
-          value={formData.notes}
+          id="Notes"
+          name="Notes"
+          value={formData.Notes}
           onChange={handleChange}
           rows={3}
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"

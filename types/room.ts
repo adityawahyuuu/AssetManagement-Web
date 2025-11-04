@@ -17,16 +17,16 @@ export interface Room {
 }
 
 export interface AddRoomDto {
-  name: string
-  lengthM: number
-  widthM: number
-  doorPosition?: string
-  doorWidthCm?: number
-  windowPosition?: string
-  windowWidthCm?: number
-  powerOutletPositions?: string[]
-  photoUrl?: string
-  notes?: string
+  Name: string
+  LengthM: number
+  WidthM: number
+  DoorPosition?: string
+  DoorWidthCm?: number
+  WindowPosition?: string
+  WindowWidthCm?: number
+  PowerOutletPositions?: string[]
+  PhotoUrl?: string
+  Notes?: string
 }
 
 export interface UpdateRoomDto {

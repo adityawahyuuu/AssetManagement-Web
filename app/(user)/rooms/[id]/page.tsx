@@ -36,7 +36,7 @@ export default function RoomDetailPage() {
       setRoom(roomResponse.data)
 
       // Fetch assets for this room
-      const assetsResponse = await apiClient.get<{ data: Asset[] }>(`/api/assets?roomId=${roomId}`)
+      const assetsResponse = await apiClient.get<{ data: Asset[] }>(`/api/assets/room/${roomId}`)
       setAssets(assetsResponse.data || [])
     } catch (error) {
       console.error("Failed to fetch room data:", error)

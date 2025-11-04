@@ -19,16 +19,16 @@ export default function RoomForm({ onSuccess, onCancel }: RoomFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<AddRoomDto>({
-    name: "",
-    lengthM: 0,
-    widthM: 0,
-    doorPosition: "",
-    doorWidthCm: undefined,
-    windowPosition: "",
-    windowWidthCm: undefined,
-    powerOutletPositions: [],
-    photoUrl: "",
-    notes: "",
+    Name: "",
+    LengthM: 0,
+    WidthM: 0,
+    DoorPosition: "",
+    DoorWidthCm: undefined,
+    WindowPosition: "",
+    WindowWidthCm: undefined,
+    PowerOutletPositions: [],
+    PhotoUrl: "",
+    Notes: "",
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -70,7 +70,9 @@ export default function RoomForm({ onSuccess, onCancel }: RoomFormProps) {
         })
         setErrors(fieldErrors)
       } else {
-        setErrors({ general: error.message || "Failed to create room" })
+        // Handle API error response (type: "Failed")
+        const errorMessage = error.message || error.data?.message || "Failed to create room"
+        setErrors({ general: errorMessage })
       }
     } finally {
       setIsSubmitting(false)
@@ -91,58 +93,58 @@ export default function RoomForm({ onSuccess, onCancel }: RoomFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium mb-1">
+            <label htmlFor="Name" className="block text-sm font-medium mb-1">
               Room Name <span className="text-red-500">*</span>
             </label>
             <Input
-              id="name"
-              name="name"
-              value={formData.name}
+              id="Name"
+              name="Name"
+              value={formData.Name}
               onChange={handleChange}
               placeholder="e.g., Living Room, Bedroom"
               required
             />
-            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+            {errors.Name && <p className="mt-1 text-sm text-red-600">{errors.Name}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="lengthM" className="block text-sm font-medium mb-1">
+              <label htmlFor="LengthM" className="block text-sm font-medium mb-1">
                 Length (m) <span className="text-red-500">*</span>
               </label>
               <Input
-                id="lengthM"
-                name="lengthM"
+                id="LengthM"
+                name="LengthM"
                 type="number"
                 step="0.1"
-                value={formData.lengthM || ""}
+                value={formData.LengthM || ""}
                 onChange={handleChange}
                 placeholder="e.g., 4.5"
                 required
               />
-              {errors.lengthM && <p className="mt-1 text-sm text-red-600">{errors.lengthM}</p>}
+              {errors.LengthM && <p className="mt-1 text-sm text-red-600">{errors.LengthM}</p>}
             </div>
 
             <div>
-              <label htmlFor="widthM" className="block text-sm font-medium mb-1">
+              <label htmlFor="WidthM" className="block text-sm font-medium mb-1">
                 Width (m) <span className="text-red-500">*</span>
               </label>
               <Input
-                id="widthM"
-                name="widthM"
+                id="WidthM"
+                name="WidthM"
                 type="number"
                 step="0.1"
-                value={formData.widthM || ""}
+                value={formData.WidthM || ""}
                 onChange={handleChange}
                 placeholder="e.g., 3.5"
                 required
               />
-              {errors.widthM && <p className="mt-1 text-sm text-red-600">{errors.widthM}</p>}
+              {errors.WidthM && <p className="mt-1 text-sm text-red-600">{errors.WidthM}</p>}
             </div>
           </div>
 
           <div className="p-3 bg-blue-50 rounded-md text-sm">
-            <p className="font-medium">Room Area: {formData.lengthM && formData.widthM ? (formData.lengthM * formData.widthM).toFixed(2) : "0.00"} m²</p>
+            <p className="font-medium">Room Area: {formData.LengthM && formData.WidthM ? (formData.LengthM * formData.WidthM).toFixed(2) : "0.00"} m²</p>
           </div>
         </CardContent>
       </Card>
@@ -154,13 +156,13 @@ export default function RoomForm({ onSuccess, onCancel }: RoomFormProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="doorPosition" className="block text-sm font-medium mb-1">
+              <label htmlFor="DoorPosition" className="block text-sm font-medium mb-1">
                 Door Position
               </label>
               <select
-                id="doorPosition"
-                name="doorPosition"
-                value={formData.doorPosition}
+                id="DoorPosition"
+                name="DoorPosition"
+                value={formData.DoorPosition}
                 onChange={handleChange}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
               >
@@ -173,14 +175,14 @@ export default function RoomForm({ onSuccess, onCancel }: RoomFormProps) {
             </div>
 
             <div>
-              <label htmlFor="doorWidthCm" className="block text-sm font-medium mb-1">
+              <label htmlFor="DoorWidthCm" className="block text-sm font-medium mb-1">
                 Door Width (cm)
               </label>
               <Input
-                id="doorWidthCm"
-                name="doorWidthCm"
+                id="DoorWidthCm"
+                name="DoorWidthCm"
                 type="number"
-                value={formData.doorWidthCm || ""}
+                value={formData.DoorWidthCm || ""}
                 onChange={handleChange}
                 placeholder="e.g., 80"
               />
@@ -189,13 +191,13 @@ export default function RoomForm({ onSuccess, onCancel }: RoomFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="windowPosition" className="block text-sm font-medium mb-1">
+              <label htmlFor="WindowPosition" className="block text-sm font-medium mb-1">
                 Window Position
               </label>
               <select
-                id="windowPosition"
-                name="windowPosition"
-                value={formData.windowPosition}
+                id="WindowPosition"
+                name="WindowPosition"
+                value={formData.WindowPosition}
                 onChange={handleChange}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
               >
@@ -208,14 +210,14 @@ export default function RoomForm({ onSuccess, onCancel }: RoomFormProps) {
             </div>
 
             <div>
-              <label htmlFor="windowWidthCm" className="block text-sm font-medium mb-1">
+              <label htmlFor="WindowWidthCm" className="block text-sm font-medium mb-1">
                 Window Width (cm)
               </label>
               <Input
-                id="windowWidthCm"
-                name="windowWidthCm"
+                id="WindowWidthCm"
+                name="WindowWidthCm"
                 type="number"
-                value={formData.windowWidthCm || ""}
+                value={formData.WindowWidthCm || ""}
                 onChange={handleChange}
                 placeholder="e.g., 120"
               />
@@ -223,13 +225,13 @@ export default function RoomForm({ onSuccess, onCancel }: RoomFormProps) {
           </div>
 
           <div>
-            <label htmlFor="notes" className="block text-sm font-medium mb-1">
+            <label htmlFor="Notes" className="block text-sm font-medium mb-1">
               Notes
             </label>
             <textarea
-              id="notes"
-              name="notes"
-              value={formData.notes}
+              id="Notes"
+              name="Notes"
+              value={formData.Notes}
               onChange={handleChange}
               rows={3}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"

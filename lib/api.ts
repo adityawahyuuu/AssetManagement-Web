@@ -1,6 +1,8 @@
-import type { PaginatedResponse } from "@/types"
+import type { PaginatedResponse, AssetCategory } from "@/types"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+// Use empty string to make relative API calls to Next.js API routes
+// The Next.js API routes will proxy to the backend API
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5080'
 
 class ApiClient {
   private baseUrl: string
@@ -11,6 +13,11 @@ class ApiClient {
 
   private getAuthHeader(): HeadersInit {
     const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null
+
+    if (typeof window !== "undefined" && !token) {
+      console.warn("[ApiClient] No auth token found in localStorage")
+    }
+
     return {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -21,7 +28,9 @@ class ApiClient {
     const data = await response.json()
 
     if (!response.ok) {
-      throw new ApiError(data.error || "An error occurred", response.status, data)
+      // Handle different error response formats
+      const errorMessage = data.message || data.error || "An error occurred"
+      throw new ApiError(errorMessage, response.status, data)
     }
 
     return data
@@ -36,9 +45,14 @@ class ApiClient {
   }
 
   async post<T>(endpoint: string, body?: any): Promise<T> {
+    const headers = this.getAuthHeader()
+    console.log(`[ApiClient] POST ${this.baseUrl}${endpoint}`, {
+      hasAuth: !!headers,
+    })
+
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: "POST",
-      headers: this.getAuthHeader(),
+      headers,
       body: body ? JSON.stringify(body) : undefined,
     })
     return this.handleResponse<T>(response)
@@ -129,7 +143,7 @@ export async function getAsset(id: string) {
 }
 
 export async function getAssetsByRoom(roomId: string) {
-  return apiClient.get(`/api/assets?roomId=${roomId}`)
+  return apiClient.get(`/api/assets/room/${roomId}`)
 }
 
 export async function createAsset(data: any) {
@@ -144,50 +158,6 @@ export async function deleteAsset(id: string) {
   return apiClient.delete(`/api/assets/${id}`)
 }
 
-export async function checkoutAsset(data: any) {
-  return apiClient.post("/api/checkouts", data)
-}
-
-export async function returnAsset(checkoutId: string, data?: any) {
-  return apiClient.post(`/api/checkouts/${checkoutId}/return`, data)
-}
-
-export async function getCheckouts(page = 1, pageSize = 10) {
-  return apiClient.get<PaginatedResponse<any>>(`/api/checkouts?page=${page}&pageSize=${pageSize}`)
-}
-
-export async function getUserCheckouts(userId: string) {
-  return apiClient.get(`/api/checkouts?userId=${userId}`)
-}
-
-export async function getDorms() {
-  return apiClient.get("/api/dorms")
-}
-
-export async function getDorm(id: string) {
-  return apiClient.get(`/api/dorms/${id}`)
-}
-
-export async function createDorm(data: any) {
-  return apiClient.post("/api/dorms", data)
-}
-
-export async function updateDorm(id: string, data: any) {
-  return apiClient.put(`/api/dorms/${id}`, data)
-}
-
-export async function getCategories() {
-  return apiClient.get("/api/categories")
-}
-
-export async function createCategory(data: any) {
-  return apiClient.post("/api/categories", data)
-}
-
-export async function updateCategory(id: string, data: any) {
-  return apiClient.put(`/api/categories/${id}`, data)
-}
-
-export async function deleteCategory(id: string) {
-  return apiClient.delete(`/api/categories/${id}`)
+export async function getAssetCategories(): Promise<AssetCategory[] | { data: AssetCategory[] }> {
+  return apiClient.get<AssetCategory[] | { data: AssetCategory[] }>(`/api/asset-categories`)
 }
