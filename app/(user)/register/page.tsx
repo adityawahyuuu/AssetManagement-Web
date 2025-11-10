@@ -10,11 +10,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { registerSchema } from "@/lib/schemas"
 import type { RegisterFormData } from "@/types/user"
 import Link from "next/link"
+import { Eye, EyeOff } from "lucide-react"
 
 export default function RegisterPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [formData, setFormData] = useState<RegisterFormData>({
     email: "",
     password: "",
@@ -125,34 +128,64 @@ export default function RegisterPage() {
               <label htmlFor="password" className="text-sm font-medium text-slate-700">
                 Password
               </label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                disabled={isLoading}
-                className="border-slate-200 focus:border-primary focus:ring-primary"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  disabled={isLoading}
+                  className="border-slate-200 focus:border-primary focus:ring-primary pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 transition-colors"
+                  disabled={isLoading}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="text-sm font-medium text-slate-700">
                 Confirm Password
               </label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-                disabled={isLoading}
-                className="border-slate-200 focus:border-primary focus:ring-primary"
-              />
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  required
+                  disabled={isLoading}
+                  className="border-slate-200 focus:border-primary focus:ring-primary pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 transition-colors"
+                  disabled={isLoading}
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>

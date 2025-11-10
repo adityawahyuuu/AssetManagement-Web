@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link"
 import AuthLayout from "@/components/layouts/auth-layout"
 import { toast } from "sonner"
-import { Mail, ArrowLeft, CheckCircle2, KeyRound } from "lucide-react"
+import { Mail, ArrowLeft, CheckCircle2, KeyRound, Eye, EyeOff } from "lucide-react"
 import { resetPasswordSchema } from "@/lib/schemas"
 import type { ResetPasswordFormData } from "@/lib/schemas"
 
@@ -21,6 +21,8 @@ export default function ForgotPasswordPage() {
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [formData, setFormData] = useState<ResetPasswordFormData>({
     email: "",
     otpCode: "",
@@ -282,17 +284,32 @@ export default function ForgotPasswordPage() {
                 <label htmlFor="password" className="text-sm font-medium text-slate-700">
                   New Password
                 </label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  disabled={isLoading}
-                  className="border-slate-200 focus:border-primary focus:ring-primary"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    disabled={isLoading}
+                    className="border-slate-200 focus:border-primary focus:ring-primary pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 transition-colors"
+                    disabled={isLoading}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
                 <p className="text-xs text-slate-500">Must be at least 8 characters</p>
               </div>
 
@@ -300,17 +317,32 @@ export default function ForgotPasswordPage() {
                 <label htmlFor="passwordConfirm" className="text-sm font-medium text-slate-700">
                   Confirm New Password
                 </label>
-                <Input
-                  id="passwordConfirm"
-                  name="passwordConfirm"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.passwordConfirm}
-                  onChange={handleChange}
-                  required
-                  disabled={isLoading}
-                  className="border-slate-200 focus:border-primary focus:ring-primary"
-                />
+                <div className="relative">
+                  <Input
+                    id="passwordConfirm"
+                    name="passwordConfirm"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={formData.passwordConfirm}
+                    onChange={handleChange}
+                    required
+                    disabled={isLoading}
+                    className="border-slate-200 focus:border-primary focus:ring-primary pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 transition-colors"
+                    disabled={isLoading}
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>

@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { RegisterFormData } from '@/types/user'
+import { API_CONFIG, BACKEND_ENDPOINTS, ERROR_MESSAGES } from '@/lib/constants'
+
+const BACKEND_API_URL = API_CONFIG.BASE_URL
 
 export async function POST(request: NextRequest) {
   try {
     const body: RegisterFormData = await request.json()
 
-    const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL
-    
     if (!BACKEND_API_URL) {
       console.error('NEXT_PUBLIC_API_URL is not defined')
       return NextResponse.json(
-        { message: 'Server configuration error: API URL not defined' },
+        { message: ERROR_MESSAGES.API.CONFIG_ERROR },
         { status: 500 }
       )
     }
@@ -22,9 +23,9 @@ export async function POST(request: NextRequest) {
     formData.append('passwordConfirm', body.confirmPassword)
     formData.append('username', body.username)
 
-    console.log('Calling backend:', `${BACKEND_API_URL}/api/user/register`)
+    console.log('Calling backend:', `${BACKEND_API_URL}${BACKEND_ENDPOINTS.USER.REGISTER}`)
 
-    const response = await fetch(`${BACKEND_API_URL}/api/user/register`, {
+    const response = await fetch(`${BACKEND_API_URL}${BACKEND_ENDPOINTS.USER.REGISTER}`, {
       method: 'POST',
       body: formData,
     })

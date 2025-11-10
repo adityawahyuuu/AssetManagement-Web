@@ -1,40 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { API_CONFIG, BACKEND_ENDPOINTS } from '@/lib/constants'
+import { extractAuthToken, handleApiError, proxyToBackend } from '@/lib/api-helpers'
 
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5080'
+const BACKEND_API_URL = API_CONFIG.BASE_URL
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // Get Authorization header
-    const authHeader = request.headers.get('Authorization')
+    const { token, error } = extractAuthToken(request)
+    if (error) return error
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { message: 'Unauthorized - No token provided' },
-        { status: 401 }
-      )
-    }
-
-    // Extract token
-    const token = authHeader.substring(7)
-
-    if (!token) {
-      return NextResponse.json(
-        { message: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      )
-    }
-
-    // Proxy request to backend API
-    const response = await fetch(`${BACKEND_API_URL}/api/assets/${params.id}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    })
+    const response = await proxyToBackend(
+      BACKEND_API_URL,
+      BACKEND_ENDPOINTS.ASSETS.BY_ID(params.id),
+      'GET',
+      token!
+    )
 
     const data = await response.json()
 
@@ -47,11 +30,7 @@ export async function GET(
 
     return NextResponse.json(data, { status: 200 })
   } catch (error) {
-    console.error('Get asset error:', error)
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Get asset')
   }
 }
 
@@ -60,38 +39,18 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Get Authorization header
-    const authHeader = request.headers.get('Authorization')
+    const { token, error } = extractAuthToken(request)
+    if (error) return error
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { message: 'Unauthorized - No token provided' },
-        { status: 401 }
-      )
-    }
-
-    // Extract token
-    const token = authHeader.substring(7)
-
-    if (!token) {
-      return NextResponse.json(
-        { message: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      )
-    }
-
-    // Get request body
     const body = await request.json()
 
-    // Proxy request to backend API
-    const response = await fetch(`${BACKEND_API_URL}/api/assets/${params.id}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    })
+    const response = await proxyToBackend(
+      BACKEND_API_URL,
+      BACKEND_ENDPOINTS.ASSETS.BY_ID(params.id),
+      'PUT',
+      token!,
+      body
+    )
 
     const data = await response.json()
 
@@ -104,11 +63,7 @@ export async function PUT(
 
     return NextResponse.json(data, { status: 200 })
   } catch (error) {
-    console.error('Update asset error:', error)
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Update asset')
   }
 }
 
@@ -117,34 +72,15 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Get Authorization header
-    const authHeader = request.headers.get('Authorization')
+    const { token, error } = extractAuthToken(request)
+    if (error) return error
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { message: 'Unauthorized - No token provided' },
-        { status: 401 }
-      )
-    }
-
-    // Extract token
-    const token = authHeader.substring(7)
-
-    if (!token) {
-      return NextResponse.json(
-        { message: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      )
-    }
-
-    // Proxy request to backend API
-    const response = await fetch(`${BACKEND_API_URL}/api/assets/${params.id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    })
+    const response = await proxyToBackend(
+      BACKEND_API_URL,
+      BACKEND_ENDPOINTS.ASSETS.BY_ID(params.id),
+      'DELETE',
+      token!
+    )
 
     const data = await response.json()
 
@@ -157,10 +93,6 @@ export async function DELETE(
 
     return NextResponse.json(data, { status: 200 })
   } catch (error) {
-    console.error('Delete asset error:', error)
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Delete asset')
   }
 }

@@ -1,51 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { API_CONFIG, BACKEND_ENDPOINTS, PAGINATION } from '@/lib/constants'
+import { extractAuthToken, handleApiError, proxyToBackend } from '@/lib/api-helpers'
 
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5080'
+const BACKEND_API_URL = API_CONFIG.BASE_URL
 
 export async function GET(request: NextRequest) {
   try {
-    // Get Authorization header
-    const authHeader = request.headers.get('Authorization')
+    const { token, error } = extractAuthToken(request)
+    if (error) return error
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { message: 'Unauthorized - No token provided' },
-        { status: 401 }
-      )
-    }
-
-    // Extract token
-    const token = authHeader.substring(7)
-
-    if (!token) {
-      return NextResponse.json(
-        { message: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      )
-    }
-
-    // Get query parameters
+    // Get query parameters for pagination
     const searchParams = request.nextUrl.searchParams
-    const roomId = searchParams.get('roomId')
-    const page = searchParams.get('page') || '1'
-    const pageSize = searchParams.get('pageSize') || '10'
-
-    // Build query string
-    let queryString = `page=${page}&pageSize=${pageSize}`
-    if (roomId) {
-      queryString += `&roomId=${roomId}`
-    }
+    const page = searchParams.get('page') || String(PAGINATION.DEFAULT_PAGE)
+    const pageSize = searchParams.get('pageSize') || String(PAGINATION.DEFAULT_PAGE_SIZE)
 
     // Proxy request to backend API
-    const response = await fetch(
-      `${BACKEND_API_URL}/api/assets?${queryString}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
+    const response = await proxyToBackend(
+      BACKEND_API_URL,
+      `${BACKEND_ENDPOINTS.ASSETS.BASE}?page=${page}&pageSize=${pageSize}`,
+      'GET',
+      token!
     )
 
     const data = await response.json()
@@ -59,48 +33,24 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data, { status: 200 })
   } catch (error) {
-    console.error('Get assets error:', error)
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Get assets')
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Get Authorization header
-    const authHeader = request.headers.get('Authorization')
+    const { token, error } = extractAuthToken(request)
+    if (error) return error
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { message: 'Unauthorized - No token provided' },
-        { status: 401 }
-      )
-    }
-
-    // Extract token
-    const token = authHeader.substring(7)
-
-    if (!token) {
-      return NextResponse.json(
-        { message: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      )
-    }
-
-    // Get request body
     const body = await request.json()
 
-    // Proxy request to backend API
-    const response = await fetch(`${BACKEND_API_URL}/api/assets`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    })
+    const response = await proxyToBackend(
+      BACKEND_API_URL,
+      BACKEND_ENDPOINTS.ASSETS.BASE,
+      'POST',
+      token!,
+      body
+    )
 
     const data = await response.json()
 
@@ -113,10 +63,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data, { status: 201 })
   } catch (error) {
-    console.error('Create asset error:', error)
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Create asset')
   }
 }

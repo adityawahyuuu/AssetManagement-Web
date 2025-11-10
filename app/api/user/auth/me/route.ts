@@ -1,40 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { API_CONFIG, BACKEND_ENDPOINTS, ERROR_MESSAGES } from '@/lib/constants'
+import { extractAuthToken, handleApiError, proxyToBackend } from '@/lib/api-helpers'
+
+const BACKEND_API_URL = API_CONFIG.BASE_URL
 
 export async function GET(request: NextRequest) {
   try {
-    // Get Authorization header
-    const authHeader = request.headers.get('Authorization')
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { message: 'Unauthorized - No token provided' },
-        { status: 401 }
-      )
-    }
-
-    // Extract token
-    const token = authHeader.substring(7)
-
-    if (!token) {
-      return NextResponse.json(
-        { message: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      )
-    }
-
-    const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL
+    const { token, error } = extractAuthToken(request)
+    if (error) return error
 
     // If backend API is configured, proxy the request
     if (BACKEND_API_URL) {
       try {
-        console.log('Calling backend:', `${BACKEND_API_URL}/api/user/auth/me`)
+        console.log('Calling backend:', `${BACKEND_API_URL}${BACKEND_ENDPOINTS.USER.ME}`)
 
-        const response = await fetch(`${BACKEND_API_URL}/api/user/auth/me`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        })
+        const response = await proxyToBackend(
+          BACKEND_API_URL,
+          BACKEND_ENDPOINTS.USER.ME,
+          'GET',
+          token!
+        )
 
         const data = await response.json()
 
@@ -75,10 +60,6 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('Auth me error:', error)
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Get auth user')
   }
 }

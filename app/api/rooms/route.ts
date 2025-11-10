@@ -1,44 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { API_CONFIG, BACKEND_ENDPOINTS, PAGINATION } from '@/lib/constants'
+import { extractAuthToken, handleApiError, proxyToBackend } from '@/lib/api-helpers'
 
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5080'
+const BACKEND_API_URL = API_CONFIG.BASE_URL
 
 export async function GET(request: NextRequest) {
   try {
-    // Get Authorization header
-    const authHeader = request.headers.get('Authorization')
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { message: 'Unauthorized - No token provided' },
-        { status: 401 }
-      )
-    }
-
-    // Extract token
-    const token = authHeader.substring(7)
-
-    if (!token) {
-      return NextResponse.json(
-        { message: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      )
-    }
+    const { token, error } = extractAuthToken(request)
+    if (error) return error
 
     // Get query parameters for pagination
     const searchParams = request.nextUrl.searchParams
-    const page = searchParams.get('page') || '1'
-    const pageSize = searchParams.get('pageSize') || '10'
+    const page = searchParams.get('page') || String(PAGINATION.DEFAULT_PAGE)
+    const pageSize = searchParams.get('pageSize') || String(PAGINATION.DEFAULT_PAGE_SIZE)
 
     // Proxy request to backend API
-    const response = await fetch(
-      `${BACKEND_API_URL}/api/rooms?page=${page}&pageSize=${pageSize}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
+    const response = await proxyToBackend(
+      BACKEND_API_URL,
+      `${BACKEND_ENDPOINTS.ROOMS.BASE}?page=${page}&pageSize=${pageSize}`,
+      'GET',
+      token!
     )
 
     const data = await response.json()
@@ -52,62 +33,28 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data, { status: 200 })
   } catch (error) {
-    console.error('Get rooms error:', error)
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Get rooms')
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Get Authorization header
-    const authHeader = request.headers.get('Authorization')
+    const { token, error } = extractAuthToken(request)
+    if (error) return error
 
-    console.log('[Next.js API] POST /api/rooms - Authorization header:', authHeader ? 'Present' : 'Missing')
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('[Next.js API] POST /api/rooms - No valid authorization header')
-      return NextResponse.json(
-        { message: 'Unauthorized - No token provided from client' },
-        { status: 401 }
-      )
-    }
-
-    // Extract token
-    const token = authHeader.substring(7)
-
-    if (!token) {
-      console.error('[Next.js API] POST /api/rooms - Token extraction failed')
-      return NextResponse.json(
-        { message: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      )
-    }
-
-    // Get request body
     const body = await request.json()
-    console.log('[Next.js API] POST /api/rooms - Request body:', JSON.stringify(body))
 
-    // Proxy request to backend API
-    console.log('[Next.js API] Forwarding to backend:', `${BACKEND_API_URL}/api/rooms`)
-    const response = await fetch(`${BACKEND_API_URL}/api/rooms`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    })
-
-    console.log('[Next.js API] Backend response status:', response.status)
+    const response = await proxyToBackend(
+      BACKEND_API_URL,
+      BACKEND_ENDPOINTS.ROOMS.BASE,
+      'POST',
+      token!,
+      body
+    )
 
     const data = await response.json()
-    console.log('[Next.js API] Backend response data:', JSON.stringify(data))
 
     if (!response.ok) {
-      console.error('[Next.js API] Backend returned error:', response.status, data)
       return NextResponse.json(
         { message: data.message || 'Failed to create room' },
         { status: response.status }
@@ -116,10 +63,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data, { status: 201 })
   } catch (error) {
-    console.error('[Next.js API] Create room error:', error)
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Create room')
   }
 }

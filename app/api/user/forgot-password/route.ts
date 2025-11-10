@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { API_CONFIG, BACKEND_ENDPOINTS, ERROR_MESSAGES } from '@/lib/constants'
+
+const BACKEND_API_URL = API_CONFIG.BASE_URL
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,12 +15,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL
-
     if (!BACKEND_API_URL) {
       console.error('NEXT_PUBLIC_API_URL is not defined')
       return NextResponse.json(
-        { message: 'Server configuration error: API URL not defined' },
+        { message: ERROR_MESSAGES.API.CONFIG_ERROR },
         { status: 500 }
       )
     }
@@ -26,9 +27,9 @@ export async function POST(request: NextRequest) {
     const formData = new FormData()
     formData.append('email', email)
 
-    console.log('Calling backend:', `${BACKEND_API_URL}/api/user/forgot-password`)
+    console.log('Calling backend:', `${BACKEND_API_URL}${BACKEND_ENDPOINTS.USER.FORGOT_PASSWORD}`)
 
-    const response = await fetch(`${BACKEND_API_URL}/api/user/forgot-password`, {
+    const response = await fetch(`${BACKEND_API_URL}${BACKEND_ENDPOINTS.USER.FORGOT_PASSWORD}`, {
       method: 'POST',
       body: formData,
     })

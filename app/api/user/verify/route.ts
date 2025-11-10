@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { API_CONFIG, BACKEND_ENDPOINTS, ERROR_MESSAGES } from '@/lib/constants'
 
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7146'
+const BACKEND_API_URL = API_CONFIG.BASE_URL
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
     formData.append('Email', email)
     formData.append('OtpCode', otp)
 
-    const response = await fetch(`${BACKEND_API_URL}/api/user/verify`, {
+    const response = await fetch(`${BACKEND_API_URL}${BACKEND_ENDPOINTS.USER.VERIFY}`, {
       method: 'POST',
       body: formData,
     })

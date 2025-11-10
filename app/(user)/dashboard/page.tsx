@@ -78,7 +78,7 @@ export default function DashboardPage() {
       />
 
       {/* Stats Grid */}
-      <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-4">
         <StatsCard
           title="Total Rooms"
           value={stats.totalRooms.toString()}

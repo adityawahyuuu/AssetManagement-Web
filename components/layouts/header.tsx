@@ -11,11 +11,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { LogOut, Settings, User } from "lucide-react"
+import { LogOut, Settings, User, Menu } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { logout } from "@/lib/auth"
 
-export default function Header() {
+interface HeaderProps {
+  sidebarOpen?: boolean
+  onSidebarToggle?: () => void
+}
+
+export default function Header({ sidebarOpen = false, onSidebarToggle }: HeaderProps) {
   const router = useRouter()
   const { user, isAuth, isLoading } = useAuth()
 
@@ -41,21 +46,31 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur supports-backdrop-filter:bg-white/60 shadow-sm">
-      <div className="flex h-16 items-center justify-between px-6">
+      <div className="flex h-16 items-center justify-between px-4 sm:px-6">
         {/* Logo and Brand */}
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white">
-            <span className="text-sm font-bold">DA</span>
-          </div>
-          <span className="hidden sm:inline text-slate-900">Dorm Assets</span>
-        </Link>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <button
+            onClick={onSidebarToggle}
+            className="md:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            type="button"
+            aria-label="Toggle sidebar"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <Link href="/" className="flex items-center gap-2 font-semibold">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white">
+              <span className="text-xs sm:text-sm font-bold">DA</span>
+            </div>
+            <span className="hidden sm:inline text-slate-900 text-sm sm:text-base">Dorm Assets</span>
+          </Link>
+        </div>
 
         {/* User Menu */}
         <div className="flex items-center gap-4">
           {isAuth && user ? (
             <DropdownMenu>
-              <DropdownMenuTrigger>
-                <button className="relative h-8 w-8 rounded-full hover:bg-slate-100 transition-colors">
+              <DropdownMenuTrigger asChild>
+                <button className="relative h-8 w-8 rounded-full hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2" type="button">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src="/placeholder-user.jpg" alt={user.fullName || "User"} />
                     <AvatarFallback className="bg-primary text-white text-xs font-semibold">

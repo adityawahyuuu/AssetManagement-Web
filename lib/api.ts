@@ -1,8 +1,9 @@
 import type { PaginatedResponse, AssetCategory } from "@/types"
+import { API_ENDPOINTS, PAGINATION, HTTP_CONFIG, ERROR_MESSAGES } from "@/lib/constants"
 
 // Use empty string to make relative API calls to Next.js API routes
 // The Next.js API routes will proxy to the backend API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5080'
+const API_BASE_URL = ''
 
 class ApiClient {
   private baseUrl: string
@@ -99,65 +100,65 @@ export class ApiError extends Error {
 export const apiClient = new ApiClient()
 
 export async function registerUser(data: any) {
-  return apiClient.post("/api/auth/register", data)
+  return apiClient.post(API_ENDPOINTS.AUTH.REGISTER, data)
 }
 
 export async function loginUser(data: any) {
-  return apiClient.post("/api/auth/login", data)
+  return apiClient.post(API_ENDPOINTS.AUTH.LOGIN, data)
 }
 
 export async function logoutUser() {
-  return apiClient.post("/api/auth/logout")
+  return apiClient.post(API_ENDPOINTS.AUTH.LOGOUT)
 }
 
 export async function getCurrentUser() {
-  return apiClient.get("/api/user/auth/me")
+  return apiClient.get(API_ENDPOINTS.AUTH.ME)
 }
 
-export async function getRooms(page = 1, pageSize = 10) {
-  return apiClient.get<PaginatedResponse<any>>(`/api/rooms?page=${page}&pageSize=${pageSize}`)
+export async function getRooms(page = PAGINATION.DEFAULT_PAGE, pageSize = PAGINATION.DEFAULT_PAGE_SIZE) {
+  return apiClient.get<PaginatedResponse<any>>(API_ENDPOINTS.ROOMS.WITH_PAGINATION(page, pageSize))
 }
 
 export async function getRoom(id: string) {
-  return apiClient.get(`/api/rooms/${id}`)
+  return apiClient.get(API_ENDPOINTS.ROOMS.BY_ID(id))
 }
 
 export async function createRoom(data: any) {
-  return apiClient.post("/api/rooms", data)
+  return apiClient.post(API_ENDPOINTS.ROOMS.BASE, data)
 }
 
 export async function updateRoom(id: string, data: any) {
-  return apiClient.put(`/api/rooms/${id}`, data)
+  return apiClient.put(API_ENDPOINTS.ROOMS.BY_ID(id), data)
 }
 
 export async function deleteRoom(id: string) {
-  return apiClient.delete(`/api/rooms/${id}`)
+  return apiClient.delete(API_ENDPOINTS.ROOMS.BY_ID(id))
 }
 
-export async function getAssets(page = 1, pageSize = 10) {
-  return apiClient.get<PaginatedResponse<any>>(`/api/assets?page=${page}&pageSize=${pageSize}`)
+export async function getAssets(page = PAGINATION.DEFAULT_PAGE, pageSize = PAGINATION.DEFAULT_PAGE_SIZE) {
+  return apiClient.get<PaginatedResponse<any>>(API_ENDPOINTS.ASSETS.WITH_PAGINATION(page, pageSize))
 }
 
 export async function getAsset(id: string) {
-  return apiClient.get(`/api/assets/${id}`)
+  return apiClient.get(API_ENDPOINTS.ASSETS.BY_ID(id))
 }
 
 export async function getAssetsByRoom(roomId: string) {
-  return apiClient.get(`/api/assets/room/${roomId}`)
+  return apiClient.get(API_ENDPOINTS.ASSETS.BY_ROOM(roomId))
 }
 
 export async function createAsset(data: any) {
-  return apiClient.post("/api/assets", data)
+  return apiClient.post(API_ENDPOINTS.ASSETS.BASE, data)
 }
 
 export async function updateAsset(id: string, data: any) {
-  return apiClient.put(`/api/assets/${id}`, data)
+  return apiClient.put(API_ENDPOINTS.ASSETS.BY_ID(id), data)
 }
 
 export async function deleteAsset(id: string) {
-  return apiClient.delete(`/api/assets/${id}`)
+  return apiClient.delete(API_ENDPOINTS.ASSETS.BY_ID(id))
 }
 
 export async function getAssetCategories(): Promise<AssetCategory[] | { data: AssetCategory[] }> {
-  return apiClient.get<AssetCategory[] | { data: AssetCategory[] }>(`/api/asset-categories`)
+  return apiClient.get<AssetCategory[] | { data: AssetCategory[] }>(API_ENDPOINTS.ASSET_CATEGORIES)
 }

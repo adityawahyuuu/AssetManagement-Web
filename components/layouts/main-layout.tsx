@@ -1,6 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
+import { useState } from "react"
 import Header from "./header"
 import Sidebar from "./sidebar"
 import { useAuth } from "@/hooks/use-auth"
@@ -11,6 +12,7 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const { isLoading } = useAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   // Trust the middleware for authentication - it will redirect if needed
   // We only use useAuth for fetching user data and displaying it
@@ -28,11 +30,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="flex h-screen flex-col">
-      <Header />
+      <Header sidebarOpen={sidebarOpen} onSidebarToggle={() => setSidebarOpen(!sidebarOpen)} />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 overflow-auto pl-64">
-          <div className="p-6">{children}</div>
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <main className="flex-1 overflow-auto">
+          <div className="p-4 sm:p-6">{children}</div>
         </main>
       </div>
     </div>

@@ -32,15 +32,7 @@
     "incremental": true,
     "types": [
       "next",
-      "node",
-      "d3-color",
-      "d3-ease",
-      "d3-path",
-      "d3-scale",
-      "d3-time",
-      "d3-timer",
-      "estree",
-      "use-sync-external-store"
+      "node"
     ],
     "plugins": [
       {
