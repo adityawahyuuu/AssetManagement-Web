@@ -1,5 +1,9 @@
 import type React from "react"
 
+// Mark all pages under (user) as dynamic to prevent static pre-rendering issues
+// These pages require authentication and dynamic data fetching
+export const dynamic = 'force-dynamic'
+
 export default function UserLayout({
   children,
 }: {

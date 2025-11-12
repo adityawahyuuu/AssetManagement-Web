@@ -4,6 +4,9 @@ import { extractAuthToken, handleApiError, proxyToBackend } from '@/lib/api-help
 
 const BACKEND_API_URL = API_CONFIG.BASE_URL
 
+// Mark as dynamic - this route requires request headers for authentication
+export const dynamic = 'force-dynamic'
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
