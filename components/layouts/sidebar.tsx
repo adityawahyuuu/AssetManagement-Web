@@ -6,7 +6,6 @@ import { LayoutDashboard, Package, DoorOpen, BarChart3, Settings, LogOut, X } fr
 import { Button } from "@/components/ui/button"
 import { logout } from "@/lib/auth"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
 
 const navItems = [
   {

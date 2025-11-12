@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { assetSchema } from "@/lib/schemas"
 import { apiClient, getAssetCategories } from "@/lib/api"
 import type { AddAssetDto, Room, AssetCategory } from "@/types"
@@ -42,21 +42,7 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
     Notes: "",
   })
 
-  useEffect(() => {
-    // Fetch asset categories
-    fetchCategories()
-
-    // Calculate room area if room data is available
-    if (room) {
-      const areaM2 = room.lengthM * room.widthM
-      setRoomAreaCm2(areaM2 * 10000) // Convert to cm²
-
-      // Fetch existing assets to calculate used area
-      fetchUsedArea()
-    }
-  }, [room])
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setLoadingCategories(true)
       const response = await getAssetCategories()
@@ -68,9 +54,9 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
     } finally {
       setLoadingCategories(false)
     }
-  }
+  }, [])
 
-  const fetchUsedArea = async () => {
+  const fetchUsedArea = useCallback(async () => {
     try {
       const response = await apiClient.get<{ data: any[] }>(`/api/assets/room/${roomId}`)
       const assets = response.data || []
@@ -85,7 +71,21 @@ export default function AssetForm({ roomId, room, onSuccess, onCancel }: AssetFo
     } catch (error) {
       console.error("Failed to fetch assets:", error)
     }
-  }
+  }, [roomId])
+
+  useEffect(() => {
+    // Fetch asset categories
+    fetchCategories()
+
+    // Calculate room area if room data is available
+    if (room) {
+      const areaM2 = room.lengthM * room.widthM
+      setRoomAreaCm2(areaM2 * 10000) // Convert to cm²
+
+      // Fetch existing assets to calculate used area
+      fetchUsedArea()
+    }
+  }, [room, fetchCategories, fetchUsedArea])
 
   const calculateAssetArea = () => {
     const length = formData.LengthCm + 2 * (formData.ClearanceSidesCm || 0)

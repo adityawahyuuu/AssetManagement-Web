@@ -32,7 +32,9 @@
     "incremental": true,
     "types": [
       "next",
-      "node"
+      "node",
+      "jest",
+      "@testing-library/jest-dom"
     ],
     "plugins": [
       {
@@ -46,6 +48,9 @@
     ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    ".next"
   ]
 }

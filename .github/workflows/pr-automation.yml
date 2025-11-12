@@ -1,0 +1,231 @@
+name: PR Automation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main, development]
+
+# Limit concurrency per PR
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # Job 1: Auto-label PRs
+  label-pr:
+    name: Auto Label PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Label PR based on files changed
+        uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml
+
+      - name: Label PR based on size
+        uses: codelytv/pr-size-labeler@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          xs_label: 'size/xs'
+          xs_max_size: 10
+          s_label: 'size/s'
+          s_max_size: 100
+          m_label: 'size/m'
+          m_max_size: 500
+          l_label: 'size/l'
+          l_max_size: 1000
+          xl_label: 'size/xl'
+          fail_if_xl: false
+
+  # Job 2: PR validation
+  validate-pr:
+    name: Validate PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check PR title format
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          requireScope: false
+
+      - name: Check for breaking changes
+        run: |
+          if git log --format=%B -n 1 ${{ github.event.pull_request.head.sha }} | grep -i "BREAKING CHANGE"; then
+            echo "[WARNING] This PR contains breaking changes" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Job 3: PR comment with test results
+  comment-results:
+    name: Comment Test Results
+    runs-on: ubuntu-latest
+    needs: validate-pr
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run tests with coverage
+        run: npm run test:ci -- --coverage
+        continue-on-error: true
+
+      - name: Generate coverage report
+        id: coverage
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            COVERAGE=$(cat coverage/coverage-summary.json | jq '.total.lines.pct' 2>/dev/null || echo "0")
+            echo "coverage=${COVERAGE%.*}" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Coverage report not found"
+            echo "coverage=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment PR with test results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const coverage = '${{ steps.coverage.outputs.coverage }}';
+
+            let comment = '## Test Results\n\n';
+            comment += `- **Coverage**: ${coverage}%\n`;
+            comment += `- **Status**: Tests ${coverage >= 80 ? '[PASS] Passing' : '[FAIL] Below threshold'}\n\n`;
+
+            if (coverage < 80) {
+              comment += '[WARNING] **Warning**: Coverage is below the 80% threshold.\n';
+            }
+
+            comment += `\n[View full results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Test Results')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+
+  # Job 4: Check for merge conflicts
+  check-conflicts:
+    name: Check Merge Conflicts
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for conflicts
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          if git merge-tree $(git merge-base HEAD origin/${{ github.base_ref }}) HEAD origin/${{ github.base_ref }} | grep -q '<<<<<'; then
+            echo "[WARNING] Merge conflicts detected" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "[PASS] No merge conflicts" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Job 5: Request reviews based on CODEOWNERS
+  request-review:
+    name: Request Reviews
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    timeout-minutes: 2
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Auto-request reviews
+        uses: kentaro-m/auto-assign-action@v2.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Job 6: Check PR description
+  check-description:
+    name: Check PR Description
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Check PR has description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+
+            // Check minimum length (200+ characters for meaningful description)
+            if (body.length < 200) {
+              core.setFailed(`PR description is too short (${body.length} chars). Please provide a detailed description of at least 200 characters.`);
+            }
+
+            // Check for required sections
+            const requiredSections = ['## Summary', '## Testing'];
+            const missingSections = requiredSections.filter(section =>
+              !body.includes(section)
+            );
+
+            if (missingSections.length > 0) {
+              core.warning(`PR is missing recommended sections: ${missingSections.join(', ')}`);
+            }

@@ -8,7 +8,6 @@ import StatsCard from "@/components/dashboard/stats-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Package, DoorOpen, Plus, Maximize2 } from "lucide-react"
-import Link from "next/link"
 import { apiClient } from "@/lib/api"
 import type { Room, Asset } from "@/types"
 
@@ -69,13 +68,12 @@ export default function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description="Manage your rooms and assets"
-        action={
-          <Button onClick={() => router.push("/rooms/new")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Room
-          </Button>
-        }
-      />
+      >
+        <Button onClick={() => router.push("/rooms/new")}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Room
+        </Button>
+      </PageHeader>
 
       {/* Stats Grid */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-4">

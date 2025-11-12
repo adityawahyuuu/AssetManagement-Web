@@ -1,0 +1,74 @@
+# Auto-labeling configuration for PRs based on changed files
+
+# Components
+'component: ui':
+  - 'components/ui/**'
+
+'component: forms':
+  - 'components/forms/**'
+
+'component: layouts':
+  - 'components/layouts/**'
+
+'component: dashboard':
+  - 'components/dashboard/**'
+
+# Areas
+'area: api':
+  - 'app/api/**'
+  - 'lib/api.ts'
+  - 'lib/api-helpers.ts'
+
+'area: auth':
+  - 'app/api/user/**'
+  - 'lib/auth.ts'
+  - 'app/(auth)/**'
+
+'area: pages':
+  - 'app/(user)/**'
+  - 'app/(auth)/**'
+
+# Types
+'type: feature':
+  - 'app/**'
+  - 'components/**'
+  - 'lib/**'
+
+'type: bugfix':
+  - 'components/**'
+  - 'lib/**'
+  - 'app/**'
+
+'type: documentation':
+  - '**/*.md'
+  - 'docs/**'
+
+'type: testing':
+  - '__tests__/**'
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - '**/*.spec.ts'
+  - '**/*.spec.tsx'
+  - 'jest.config.js'
+  - 'jest.setup.js'
+
+'type: config':
+  - '*.json'
+  - '*.yml'
+  - '*.yaml'
+  - '.github/**'
+  - '.husky/**'
+
+'type: dependencies':
+  - 'package.json'
+  - 'package-lock.json'
+
+# Importance
+'priority: critical':
+  - 'lib/auth.ts'
+  - 'lib/constants.ts'
+  - 'app/api/**'
+
+'needs: review':
+  - 'lib/**'
+  - 'app/api/**'

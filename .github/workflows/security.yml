@@ -1,0 +1,318 @@
+name: Security Checks
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  push:
+    branches:
+      - main
+      - development
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - development
+  workflow_dispatch:
+
+# Only run one security check at a time
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '18.x'
+
+jobs:
+  # Job 0: Workflow trigger info (for debugging)
+  workflow-info:
+    name: Workflow Trigger Info
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+
+    steps:
+      - name: Display trigger information
+        run: |
+          echo "=== Security Workflow Trigger Info ==="
+          echo "Event: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "============================================"
+
+  # Job 1: Dependency vulnerability scanning
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Validate secrets are configured
+        run: |
+          if [ -z "${{ secrets.CODECOV_TOKEN }}" ]; then
+            echo "⚠️ Warning: CODECOV_TOKEN not configured"
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run npm audit
+        id: audit
+        run: |
+          npm audit --json > audit-results.json || true
+          npm audit --audit-level=moderate || echo "Vulnerabilities found"
+
+      - name: Parse audit results
+        run: |
+          echo "## Dependency Audit Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f audit-results.json ]; then
+            critical=$(jq '.metadata.vulnerabilities.critical // 0' audit-results.json)
+            high=$(jq '.metadata.vulnerabilities.high // 0' audit-results.json)
+            moderate=$(jq '.metadata.vulnerabilities.moderate // 0' audit-results.json)
+            low=$(jq '.metadata.vulnerabilities.low // 0' audit-results.json)
+
+            echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Critical | $critical |" >> $GITHUB_STEP_SUMMARY
+            echo "| High | $high |" >> $GITHUB_STEP_SUMMARY
+            echo "| Moderate | $moderate |" >> $GITHUB_STEP_SUMMARY
+            echo "| Low | $low |" >> $GITHUB_STEP_SUMMARY
+
+            if [ "$critical" -gt "0" ] || [ "$high" -gt "0" ]; then
+              echo "[FAIL] Critical or high vulnerabilities found!" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+          fi
+
+      - name: Upload audit results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: npm-audit-results
+          path: audit-results.json
+          retention-days: 30
+
+  # Job 2: CodeQL analysis
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: +security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # Job 3: Dependency review (PR only)
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          deny-licenses: GPL-3.0, AGPL-3.0
+          comment-summary-in-pr: true
+
+  # Job 4: Secret scanning
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # Job 5: License compliance
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install license checker
+        run: npm install -g license-checker
+
+      - name: Check licenses
+        run: |
+          license-checker --json --out licenses.json || true
+          license-checker --summary
+
+      - name: Check for prohibited licenses
+        run: |
+          echo "Checking for prohibited licenses..."
+          prohibited="GPL-3.0 AGPL-3.0"
+
+          if license-checker --summary | grep -iE "$prohibited"; then
+            echo "[FAIL] Prohibited licenses found!"
+            exit 1
+          else
+            echo "[PASS] No prohibited licenses found"
+          fi
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: licenses.json
+          retention-days: 30
+
+  # Job 6: OWASP dependency check
+  owasp-check:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        id: depcheck
+        with:
+          project: 'AssetManagement-Web'
+          path: '.'
+          format: 'HTML'
+          args: >
+            --failOnCVSS 7
+            --enableRetired
+
+      - name: Upload OWASP report
+        uses: actions/upload-artifact@v4
+        with:
+          name: owasp-dependency-check
+          path: ${{github.workspace}}/reports
+          retention-days: 30
+
+  # Job 7: Container scanning (if using Docker)
+  # container-scan:
+  #   name: Container Security Scan
+  #   runs-on: ubuntu-latest
+  #   if: hashFiles('Dockerfile') != ''
+  #   timeout-minutes: 10
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Build Docker image
+  #       run: docker build -t asset-management:${{ github.sha }} .
+  #
+  #     - name: Run Trivy vulnerability scanner
+  #       uses: aquasecurity/trivy-action@master
+  #       with:
+  #         image-ref: 'asset-management:${{ github.sha }}'
+  #         format: 'sarif'
+  #         output: 'trivy-results.sarif'
+  #
+  #     - name: Upload Trivy results to GitHub Security
+  #       uses: github/codeql-action/upload-sarif@v3
+  #       with:
+  #         sarif_file: 'trivy-results.sarif'
+
+  # Job 8: Security report summary
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [workflow-info, dependency-scan, codeql-analysis, license-check]
+    if: always()
+    timeout-minutes: 2
+
+    steps:
+      - name: Generate security summary
+        run: |
+          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Scan | ${{ needs.dependency-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL Analysis | ${{ needs.codeql-analysis.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| License Check | ${{ needs.license-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.dependency-scan.result }}" != "success" ] || \
+             [ "${{ needs.codeql-analysis.result }}" != "success" ]; then
+            echo "[WARNING] Some security checks failed. Please review the results." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "[PASS] All security checks passed!" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Notify on security issues
+        if: |
+          needs.dependency-scan.result == 'failure' ||
+          needs.codeql-analysis.result == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '[SECURITY] Security Issues Detected',
+              body: `Security scans have detected issues that need attention.\n\nWorkflow: ${context.workflow}\nRun: ${context.runNumber}\n\nPlease review the workflow results and address any security concerns.`,
+              labels: ['security', 'urgent']
+            });

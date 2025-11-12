@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import MainLayout from "@/components/layouts/main-layout"
 import PageHeader from "@/components/layouts/page-header"
@@ -24,11 +24,7 @@ export default function RoomDetailPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState("")
 
-  useEffect(() => {
-    fetchRoomData()
-  }, [roomId])
-
-  const fetchRoomData = async () => {
+  const fetchRoomData = useCallback(async () => {
     setIsLoading(true)
     try {
       // Fetch room details
@@ -43,7 +39,11 @@ export default function RoomDetailPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [roomId])
+
+  useEffect(() => {
+    fetchRoomData()
+  }, [fetchRoomData])
 
   const handleAssetAdded = () => {
     setShowAssetForm(false)
@@ -106,12 +106,11 @@ export default function RoomDetailPage() {
       <PageHeader
         title={room.name}
         description={`Manage assets in ${room.name}`}
-        action={
-          <Button onClick={() => router.push("/dashboard")}>
-            Back to Dashboard
-          </Button>
-        }
-      />
+      >
+        <Button onClick={() => router.push("/dashboard")}>
+          Back to Dashboard
+        </Button>
+      </PageHeader>
 
       {/* Room Information Card */}
       <Card className="mb-6">

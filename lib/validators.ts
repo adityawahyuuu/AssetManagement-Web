@@ -4,9 +4,6 @@ import {
   loginSchema,
   roomSchema,
   assetSchema,
-  dormSchema,
-  assetCategorySchema,
-  assetCheckoutSchema,
 } from "./schemas"
 import { ValidationError } from "./error-handler"
 
@@ -49,42 +46,6 @@ export async function validateRoomForm(data: unknown) {
 export async function validateAssetForm(data: unknown) {
   try {
     return assetSchema.parse(data)
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const errors = error.flatten().fieldErrors
-      throw new ValidationError("Validation failed", errors as any)
-    }
-    throw error
-  }
-}
-
-export async function validateDormForm(data: unknown) {
-  try {
-    return dormSchema.parse(data)
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const errors = error.flatten().fieldErrors
-      throw new ValidationError("Validation failed", errors as any)
-    }
-    throw error
-  }
-}
-
-export async function validateAssetCategoryForm(data: unknown) {
-  try {
-    return assetCategorySchema.parse(data)
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const errors = error.flatten().fieldErrors
-      throw new ValidationError("Validation failed", errors as any)
-    }
-    throw error
-  }
-}
-
-export async function validateAssetCheckoutForm(data: unknown) {
-  try {
-    return assetCheckoutSchema.parse(data)
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errors = error.flatten().fieldErrors

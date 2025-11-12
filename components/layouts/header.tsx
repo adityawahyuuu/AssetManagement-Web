@@ -16,11 +16,10 @@ import { useAuth } from "@/hooks/use-auth"
 import { logout } from "@/lib/auth"
 
 interface HeaderProps {
-  sidebarOpen?: boolean
   onSidebarToggle?: () => void
 }
 
-export default function Header({ sidebarOpen = false, onSidebarToggle }: HeaderProps) {
+export default function Header({ onSidebarToggle }: HeaderProps) {
   const router = useRouter()
   const { user, isAuth, isLoading } = useAuth()
 

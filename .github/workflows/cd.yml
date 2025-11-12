@@ -1,0 +1,275 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+# Ensure only one deployment runs at a time
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '18.x'
+
+jobs:
+  # Job 1: Pre-deployment checks
+  pre-deploy:
+    name: Pre-deployment Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    outputs:
+      deploy-env: ${{ steps.set-env.outputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run all tests
+        run: npm run test:ci
+        env:
+          NODE_ENV: test
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Set deployment environment
+        id: set-env
+        run: |
+          if [ "${{ github.event.inputs.environment }}" != "" ]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          else
+            echo "environment=production" >> $GITHUB_OUTPUT
+          fi
+
+  # Job 2: Deploy to Vercel (or your hosting platform)
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    needs: pre-deploy
+    timeout-minutes: 15
+    environment:
+      name: ${{ needs.pre-deploy.outputs.deploy-env }}
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Validate required secrets
+        run: |
+          required_secrets=("VERCEL_TOKEN" "VERCEL_ORG_ID" "VERCEL_PROJECT_ID")
+          missing_secrets=()
+
+          for secret in "${required_secrets[@]}"; do
+            if [ -z "$(eval echo \${{ secrets.$secret }})" ]; then
+              missing_secrets+=("$secret")
+            fi
+          done
+
+          if [ ${#missing_secrets[@]} -gt 0 ]; then
+            echo "[FAIL] Missing required secrets: ${missing_secrets[*]}"
+            exit 1
+          fi
+          echo "[PASS] All required secrets are configured"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      # Example: Deploy to Vercel
+      - name: Deploy to Vercel
+        id: deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: ${{ needs.pre-deploy.outputs.deploy-env == 'production' && '--prod' || '' }}
+          working-directory: ./
+
+      # Alternative: Deploy to custom server via SSH
+      # - name: Deploy to custom server
+      #   uses: easingthemes/ssh-deploy@v4
+      #   with:
+      #     SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      #     REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+      #     REMOTE_USER: ${{ secrets.REMOTE_USER }}
+      #     TARGET: ${{ secrets.REMOTE_TARGET }}
+
+      - name: Set deployment URL
+        run: echo "Deployed to ${{ steps.deploy.outputs.url }}"
+
+  # Job 3: Post-deployment verification
+  verify:
+    name: Post-deployment Verification
+    runs-on: ubuntu-latest
+    needs: [pre-deploy, deploy]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Wait for deployment to be ready
+        run: |
+          echo "Waiting for deployment to stabilize..."
+          sleep 10
+
+      # Add your deployment URL here
+      - name: Health check with retries
+        run: |
+          URL="${{ secrets.PRODUCTION_URL }}"
+          if [ -z "$URL" ]; then
+            echo "No production URL configured, skipping health check"
+            exit 0
+          fi
+
+          echo "Checking health endpoint: $URL"
+
+          max_attempts=5
+          attempt=1
+          wait_seconds=10
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Health check attempt $attempt/$max_attempts..."
+            response=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "$URL" || echo "000")
+
+            if [ "$response" = "200" ] || [ "$response" = "301" ] || [ "$response" = "302" ]; then
+              echo "[PASS] Deployment health check passed (HTTP $response)"
+              exit 0
+            fi
+
+            if [ $attempt -lt $max_attempts ]; then
+              echo "[WAIT] Health check failed (HTTP $response), retrying in ${wait_seconds}s..."
+              sleep $wait_seconds
+            fi
+
+            attempt=$((attempt + 1))
+          done
+
+          echo "[FAIL] Deployment health check failed after $max_attempts attempts"
+          exit 1
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests..."
+          # Add smoke test commands here
+          # Example: npm run test:e2e:smoke
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "[SUCCESS] Deployment successful!"
+          echo "Environment: ${{ needs.pre-deploy.outputs.deploy-env }}"
+          echo "Commit: ${{ github.sha }}"
+
+  # Job 4: Rollback on failure
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy, verify]
+    if: needs.deploy.result == 'failure' || needs.verify.result == 'failure'
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Notify rollback
+        run: |
+          echo "[WARNING] Deployment verification failed, initiating rollback..."
+
+      # Example: Rollback on Vercel
+      - name: Rollback Vercel deployment
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--rollback'
+
+      - name: Notify team
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Production Deployment Failed',
+              body: `Deployment failed and was rolled back.\n\nCommit: ${context.sha}\nWorkflow: ${context.workflow}\nRun: ${context.runNumber}`,
+              labels: ['deployment', 'urgent']
+            });
+
+  # Job 5: Notify team
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy, verify]
+    if: always()
+    timeout-minutes: 2
+
+    steps:
+      - name: Send Slack notification
+        if: secrets.SLACK_WEBHOOK_URL != ''
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            Deployment Status: ${{ job.status }}
+            Environment: ${{ needs.pre-deploy.outputs.deploy-env }}
+            Commit: ${{ github.sha }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Create deployment summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ needs.pre-deploy.outputs.deploy-env }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workflow run**: [${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY

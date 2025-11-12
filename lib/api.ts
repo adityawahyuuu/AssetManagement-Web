@@ -1,5 +1,5 @@
 import type { PaginatedResponse, AssetCategory } from "@/types"
-import { API_ENDPOINTS, PAGINATION, HTTP_CONFIG, ERROR_MESSAGES } from "@/lib/constants"
+import { API_ENDPOINTS, PAGINATION } from "@/lib/constants"
 
 // Use empty string to make relative API calls to Next.js API routes
 // The Next.js API routes will proxy to the backend API

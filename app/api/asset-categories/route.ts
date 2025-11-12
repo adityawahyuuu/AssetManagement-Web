@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { API_CONFIG, BACKEND_ENDPOINTS, ERROR_MESSAGES } from '@/lib/constants'
+import { API_CONFIG, BACKEND_ENDPOINTS } from '@/lib/constants'
 import { extractAuthToken, handleApiError, proxyToBackend } from '@/lib/api-helpers'
 
 const BACKEND_API_URL = API_CONFIG.BASE_URL

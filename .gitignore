@@ -6,9 +6,12 @@
 # next.js
 /.next/
 /out/
+/dist/
 
 # production
 /build
+.claude
+
 
 # debug
 npm-debug.log*
@@ -27,7 +30,34 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# exclude .md but not README
+# IDE/Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+
+# Vim
+*.swp
+*.swo
+*~
+.swc
+
+# Cache
+.eslintcache
+.turbo/
+
+# Testing
+.nyc_output/
+
+# exclude .md but not README & coverage/ generated file
 *.md
 !README.md
-nul
+coverage/**
+coverage

@@ -58,13 +58,12 @@ export default function RoomsPage() {
       <PageHeader
         title="All Rooms"
         description="Manage all your rooms"
-        action={
-          <Button onClick={() => router.push("/dashboard")} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Room
-          </Button>
-        }
-      />
+      >
+        <Button onClick={() => router.push("/dashboard")} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add Room
+        </Button>
+      </PageHeader>
 
       <Card>
         <CardHeader>
