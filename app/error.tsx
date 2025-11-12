@@ -3,10 +3,8 @@
 export const dynamic = 'force-dynamic'
 
 export default function Error({
-  error,
   reset,
 }: {
-  error: Error & { digest?: string }
   reset: () => void
 }) {
   return (
