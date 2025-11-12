@@ -3,6 +3,9 @@ import type { Metadata } from "next"
 import { Toaster } from "sonner"
 import "./globals.css"
 
+// Mark as dynamic for development - prevents static pre-rendering issues
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "Dorm Asset Management",
   description: "Manage and track dorm assets efficiently",
