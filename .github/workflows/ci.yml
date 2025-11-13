@@ -290,21 +290,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Create environment file
+      - name: Create CI environment file
         run: |
-          echo "Creating .env.local for development build..."
-          if [ -f ".env.example" ]; then
-            cp .env.example .env.local
-          else
-            echo "NEXT_PUBLIC_API_URL=http://localhost:5080" > .env.local
-          fi
-          cat .env.local
+          # Create a .env.production file with placeholder values for CI build
+          # These values are only used during build-time validation
+          cat > .env.production << 'EOF'
+          # CI Build Environment - Placeholder values for build validation
+          NEXT_PUBLIC_API_URL=https://api.example.com
+          NEXT_PUBLIC_TOKEN_EXPIRATION_MINUTES=15
+          NEXT_PUBLIC_DEFAULT_PAGE_SIZE=20
+          EOF
+          echo "✓ Created .env.production for CI build"
+          cat .env.production
 
       - name: Build application
         run: npm run build
-        env:
-          NODE_ENV: development
-          SKIP_ENV_VALIDATION: true
 
       - name: Check build output
         run: |

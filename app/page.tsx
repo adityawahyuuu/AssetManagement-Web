@@ -3,6 +3,9 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 
+// Force dynamic rendering to avoid static generation errors with localStorage
+export const dynamic = 'force-dynamic'
+
 export default function Home() {
   const router = useRouter()
 
