@@ -3,7 +3,7 @@ name: Deploy to Production
 on:
   push:
     branches:
-      - main
+      - main  # ONLY trigger on main branch - NO other branches
   workflow_dispatch:
     inputs:
       environment:
@@ -17,17 +17,46 @@ on:
 
 # Ensure only one deployment runs at a time
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-production
   cancel-in-progress: false
 
 env:
   NODE_VERSION: '18.x'
 
 jobs:
+  # Job 0: Branch validation (runs first)
+  validate-branch:
+    name: Validate Deployment Branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+
+    steps:
+      - name: Check branch is main
+        run: |
+          echo "========================================="
+          echo "  DEPLOYMENT BRANCH VALIDATION"
+          echo "========================================="
+          echo "Current branch: ${{ github.ref_name }}"
+          echo "Expected branch: main"
+          echo ""
+
+          if [ "${{ github.ref_name }}" != "main" ]; then
+            echo "[FAIL] ERROR: Deployment can only run on 'main' branch!"
+            echo "Current branch is: ${{ github.ref_name }}"
+            echo ""
+            echo "This workflow should NOT have been triggered."
+            echo "Please check your workflow configuration."
+            exit 1
+          fi
+
+          echo "[SUCCESS] Branch validation passed"
+          echo "========================================="
+
   # Job 1: Pre-deployment checks
   pre-deploy:
     name: Pre-deployment Checks
     runs-on: ubuntu-latest
+    needs: validate-branch  # Only run after branch validation
     timeout-minutes: 10
 
     outputs:
@@ -84,21 +113,33 @@ jobs:
 
     steps:
       - name: Validate required secrets
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          required_secrets=("VERCEL_TOKEN" "VERCEL_ORG_ID" "VERCEL_PROJECT_ID")
+          echo "Validating required secrets..."
           missing_secrets=()
 
-          for secret in "${required_secrets[@]}"; do
-            if [ -z "$(eval echo \${{ secrets.$secret }})" ]; then
-              missing_secrets+=("$secret")
-            fi
-          done
+          if [ -z "$VERCEL_TOKEN" ]; then
+            missing_secrets+=("VERCEL_TOKEN")
+          fi
+
+          if [ -z "$VERCEL_ORG_ID" ]; then
+            missing_secrets+=("VERCEL_ORG_ID")
+          fi
+
+          if [ -z "$VERCEL_PROJECT_ID" ]; then
+            missing_secrets+=("VERCEL_PROJECT_ID")
+          fi
 
           if [ ${#missing_secrets[@]} -gt 0 ]; then
             echo "[FAIL] Missing required secrets: ${missing_secrets[*]}"
+            echo "Please configure these secrets in GitHub repository settings."
             exit 1
           fi
-          echo "[PASS] All required secrets are configured"
+
+          echo "[SUCCESS] [PASS] All required secrets are configured"
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -254,7 +295,8 @@ jobs:
 
     steps:
       - name: Send Slack notification
-        if: secrets.SLACK_WEBHOOK_URL != ''
+        # Slack notifications are optional - will skip if SLACK_WEBHOOK_URL is not configured
+        continue-on-error: true
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
